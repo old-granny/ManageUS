@@ -1,20 +1,31 @@
 services:
-  backend:
+  manageus-backend:
     build:
       context: ./backend
       dockerfile: Dockerfile.prod
+    container_name: "manageus-api"
 
-    ports:
-      - "3000:3000"
+    networks:
+      - default
+      - proxy-net
 
     restart: unless-stopped
 
-  frontend:
+  manageus-frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile.prod
+    
+    container_name: "manageus"
 
-    ports:
-      - "80:80"
+    networks:
+      - default
+      - proxy-net
 
     restart: unless-stopped
+
+networks:
+  proxy-net:
+    external: true
+  default:
+    driver: bridge
