@@ -2,7 +2,7 @@ services:
   manageus-backend:
     build:
       context: ./backend
-      dockerfile: Dockerfile.prod
+      dockerfile: DockerFile.prod
     container_name: "manageus-api"
 
     networks:
@@ -14,7 +14,7 @@ services:
   manageus-frontend:
     build:
       context: ./frontend
-      dockerfile: Dockerfile.prod
+      dockerfile: DockerFile.prod
     
     container_name: "manageus"
 
