@@ -1,5 +1,20 @@
 services:
   backend:
-    build: ./backend/DockerFile.prod
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.prod
+
+    ports:
+      - "3000:3000"
+
+    restart: unless-stopped
+
   frontend:
-    build: ./frontend/DockerFile.prod
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.prod
+
+    ports:
+      - "80:80"
+
+    restart: unless-stopped
