@@ -1,0 +1,22 @@
+# backend/Dockerfile.dev
+
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Install dependencies first
+COPY package*.json ./
+
+RUN npm install
+
+# Copy source files
+COPY . .
+
+# NestJS default port
+EXPOSE 3000
+
+# Enable polling for hot reload in Docker
+ENV CHOKIDAR_USEPOLLING=true
+
+# Start NestJS in watch mode
+CMD ["npm", "run", "start:dev"]

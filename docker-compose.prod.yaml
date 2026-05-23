@@ -1,0 +1,5 @@
+services:
+  backend:
+    build: ./backend/DockerFile.prod
+  frontend:
+    build: ./frontend/DockerFile.prod
