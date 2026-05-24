@@ -167,12 +167,49 @@ export function TimelineEditorPage() {
     setSteps(prev => prev.filter(s => s.id !== id));
   }
 
+  /** Whitelist-sanitize steps to strip any stale/extra fields before persisting or exporting */
+  function sanitizeSteps(raw: TimelineStep[]): TimelineStep[] {
+    return raw.map(s => {
+      const shared = {
+        id:          s.id,
+        trackId:     s.trackId,
+        startOffset: s.startOffset,
+        duration:    s.duration,
+      };
+      if (s.type === 'action') {
+        return {
+          ...shared,
+          type:             'action' as const,
+          componentId:      s.componentId,
+          action:           s.action,
+          ...(s.attachedFileName ? { attachedFileName: s.attachedFileName } : {}),
+        };
+      }
+      if (s.type === 'group') {
+        return {
+          ...shared,
+          type: 'group' as const,
+          actions: s.actions.map(a => ({
+            componentId:      a.componentId,
+            action:           a.action,
+            ...(a.attachedFileName ? { attachedFileName: a.attachedFileName } : {}),
+          })),
+        };
+      }
+      return {
+        ...shared,
+        type:   'wait' as const,
+        waitMs: s.waitMs,
+      };
+    });
+  }
+
   function buildTimeline(): Timeline {
     return {
       id:      existingTimeline?.id ?? `timeline-${Date.now()}`,
       name:    timelineName,
       sceneId: scene?.id ?? '',
-      steps,
+      steps:   sanitizeSteps(steps),
     };
   }
 
@@ -180,13 +217,17 @@ export function TimelineEditorPage() {
     const timeline = buildTimeline();
     dispatch({ type: 'SAVE_TIMELINE', timeline });
     dispatch({ type: 'SET_ACTIVE_TIMELINE', id: timeline.id });
-    exportTimelineZip(timeline, scene, fileStore.current, timelineName)
+    // download: true  → triggers browser ZIP download
+    // upload: false   → does NOT try to reach the backend (manager may not be connected)
+    exportTimelineZip(timeline, scene, fileStore.current, timelineName, { download: true, upload: false })
       .catch(err => console.error('ZIP export failed:', err));
   }
 
   async function handleUpload(): Promise<void> {
     const timeline = buildTimeline();
-    await exportTimelineZip(timeline, scene, fileStore.current, timelineName, { download: false });
+    // download: false → no browser download popup
+    // upload: true    → sends the ZIP to the backend for the Pi
+    await exportTimelineZip(timeline, scene, fileStore.current, timelineName, { download: false, upload: true });
   }
 
 
