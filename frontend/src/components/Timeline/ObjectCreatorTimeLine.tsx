@@ -48,14 +48,14 @@ export function ObjectCreatorTimeLine({
         <h3 style={{ marginBottom: '10px' }}>Component Creator</h3>
 
         <p style={{ fontSize: 11, color: '#64748b', marginBottom: '10px' }}>
-          Piste active : <strong style={{ color: '#93c5fd' }}>{activeTrackName}</strong>
+          Active track : <strong style={{ color: '#93c5fd' }}>{activeTrackName}</strong>
         </p>
 
         {/* Zone Scrollable des composants sélectionnés */}
         <div className="creator-scroll-area" style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px', paddingRight: '4px' }}>
           {selectedComps.length === 0 ? (
             <p className="subtitle" style={{ margin: 'auto' }}>
-              Clique sur un ou plusieurs objets<br />dans la scène
+              Select one or more objects<br />in the scene
             </p>
           ) : (
             selectedComps.map(comp => (
@@ -87,7 +87,7 @@ export function ObjectCreatorTimeLine({
         {/* Bouton pour générer le bloc combiné */}
         {selectedComps.length > 0 && (
           <button className="btn btn-action" style={{ marginTop: '12px', padding: '10px', width: '100%', flexShrink: 0 }} onClick={handleCreateBlock}>
-            {selectedComps.length > 1 ? 'Créer le bloc groupé' : 'Ajouter à la timeline'}
+            {'Add to timeline'}
           </button>
         )}
       </div>

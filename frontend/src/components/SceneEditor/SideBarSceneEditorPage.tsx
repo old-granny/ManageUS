@@ -9,11 +9,11 @@ interface SidebarProps {
 
 export function Sidebar({ paletteKinds, onPaletteDragStart, }: SidebarProps) {
   return (
-    <aside className="flex h-full w-64 flex-col items-center gap-4 pt-6 pb-6 px-4 overflow-y-auto bg-zinc-950 border-r border-zinc-800 shadow-2xl">
+      <aside className="flex h-full w-[280px] flex-col items-center gap-4 p-5 overflow-y-auto bg-[#1a2a5e] border-r-[4px] border-black shadow-2xl">
       
-      <div className="w-full text-center">
+      <div className="w-full text-center" style={{marginTop: '20px'}}>
         <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">
-          Palette d'Équipement
+          Equipment Palette
         </p>
       </div>
 

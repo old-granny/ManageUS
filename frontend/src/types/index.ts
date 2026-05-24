@@ -11,13 +11,13 @@ export type ComponentKind = 'led' | 'speaker' | 'projector' | 'curtain' | 'secti
 
 /** Human-readable French labels for each component kind (used in the UI) */
 export const KIND_LABELS: Record<ComponentKind, string> = {
-  led:     'Lumière',
-  speaker:   'Haut-parleur',
-  projector: 'Projecteur',
-  curtain:   'Rideau',
-  section_scene: 'Section de Scène',
-  flame: 'Flamme',
-  corde: 'Corde', 
+  led:     'Light',
+  speaker:   'Speaker',
+  projector: 'Projector',
+  curtain:   'Curtain',
+  section_scene: 'Scene section',
+  flame: 'Flame',
+  corde: 'Rope', 
 };
 
 

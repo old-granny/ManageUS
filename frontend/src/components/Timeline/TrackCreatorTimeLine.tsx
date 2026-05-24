@@ -478,7 +478,7 @@ export function TrackCreatorTimeLine({
                   }}
                 >
                   {trackSteps.length === 0 && (
-                    <span className="track-empty-hint">Drag a block here</span>
+                    <span className="track-empty-hint"></span>
                   )}
 
                   {trackSteps.map(step => {
