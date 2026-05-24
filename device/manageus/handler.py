@@ -29,7 +29,6 @@ class Handler:
         self.serialNumber = serialNumber
         self.pairingCode = 0
         self.logger.info(f"Handler instancied for {self.serialNumber}")
-        self._setup_gpio()
 
     def _setup_gpio(self):
         gpio.setmode(gpio.BCM)
