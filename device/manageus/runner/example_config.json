@@ -1,0 +1,14 @@
+{
+    "scene_name": "Test",
+    "file_version": "0.1",
+    "sequence": [
+        {
+            "task_id": "curtains",
+            "start_time": 0.0,
+            "expected_end_time": 1.0,
+            "args": {
+                "mode": "on"
+            }
+        }
+    ]
+}
