@@ -1,6 +1,6 @@
-import type { ComponentKind } from '../types';
-import { ComponentIcon } from './ComponentIcon';
-import { KIND_LABELS } from '../types';
+import type { ComponentKind } from '../../types';
+import { ComponentIcon } from '../ComponentIcon';
+import { KIND_LABELS } from '../../types';
 
 interface SidebarProps {
   paletteKinds: ComponentKind[];

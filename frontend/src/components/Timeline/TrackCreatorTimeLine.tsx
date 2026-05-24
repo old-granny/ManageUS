@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect } from 'react';
-import { type PlacedComponent, type TimelineStep } from '../types';
+import { type PlacedComponent, type TimelineStep } from '../../types';
 
 interface Track { id: string; name: string; }
 

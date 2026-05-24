@@ -1,9 +1,9 @@
 import { useRef, useState, useEffect } from 'react';
-import { ComponentIcon }          from './ComponentIcon';
-import { COMPONENT_CONFIG, type PlacedComponent, type Scene } from '../types';
-import configData                  from '../config.json';
-import ResizableComponents         from './ResizableObjects.tsx';
-import NonResizableComponents      from './NonRezisableObjects';
+import { ComponentIcon }          from '../ComponentIcon.tsx';
+import { COMPONENT_CONFIG, type PlacedComponent, type Scene } from '../../types/index.ts';
+import configData                  from '../../config.json';
+import ResizableComponents         from '../ResizableObjects.tsx';
+import NonResizableComponents      from '../NonRezisableObjects.tsx';
 
 interface SceneCreatorTimeLineProps {
   scene:          Scene | undefined;

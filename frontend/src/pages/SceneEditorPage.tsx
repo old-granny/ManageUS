@@ -1,21 +1,18 @@
 import { useState, useRef, useEffect } from 'react';
 import type { CSSProperties } from 'react';
-import { ComponentIcon } from '../components/ComponentIcon';
 import { useAppStore } from '../store/AppContext';
-import { KIND_LABELS, type PlacedComponent, type ComponentKind, type Scene, COMPONENT_TEXTURES } from '../types';
+import { KIND_LABELS, type PlacedComponent, type ComponentKind, type Scene } from '../types';
 import { COMPONENT_CONFIG } from '../types';
-import { TrashIcon, ChevronUpIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
-
+import { Headbar } from '../components/SceneEditor/headbar.tsx';
 import configData from '../config.json';
-import { Sidebar } from '../components/SideBarSceneEditorPage';
-import ResizableComponents from '../components/ResizableObjects.tsx';
-import NonResizableComponents from '../components/NonRezisableObjects';
+import { Sidebar } from '../components/SceneEditor/SideBarSceneEditorPage.tsx';
+import { RenderComponents } from '../components/SceneEditor/renderComponents.tsx';
 
-const DEFAULT_COMP_W = configData.DEFAULT_COMP_W;
-const DEFAULT_COMP_H = configData.DEFAULT_COMP_H;
 const MIN_COMP_SIZE = configData.MIN_COMP_SIZE;
 const VIRTUAL_STAGE_WIDTH = configData.VIRTUAL_STAGE_WIDTH;
 const VIRTUAL_STAGE_HEIGHT = configData.VIRTUAL_STAGE_HEIGHT;
+const DEFAULT_COMP_W = configData.DEFAULT_COMP_W;
+const DEFAULT_COMP_H = configData.DEFAULT_COMP_H;
 
 const PALETTE_KINDS: ComponentKind[] = ['light', 'speaker', 'projector', 'curtain', 'section_scene', 'corde', 'flame'];
 
@@ -41,19 +38,27 @@ interface DraggingCompState {
   origY:        number;
 }
 
-const RESIZE_HANDLES: { dir: ResizeDir; cursor: string; style: CSSProperties }[] = [
-  { dir: 'n',  cursor: 'n-resize',  style: { top: 0,      left: '50%', transform: 'translate(-50%, -50%)' } },
-  { dir: 'ne', cursor: 'ne-resize', style: { top: 0,      right: 0,    transform: 'translate(50%, -50%)'  } },
-  { dir: 'e',  cursor: 'e-resize',  style: { top: '50%',  right: 0,    transform: 'translate(50%, -50%)'  } },
-  { dir: 'se', cursor: 'se-resize', style: { bottom: 0,   right: 0,    transform: 'translate(50%, 50%)'   } },
-  { dir: 's',  cursor: 's-resize',  style: { bottom: 0,   left: '50%', transform: 'translate(-50%, 50%)'  } },
-  { dir: 'sw', cursor: 'sw-resize', style: { bottom: 0,   left: 0,     transform: 'translate(-50%, 50%)'  } },
-  { dir: 'w',  cursor: 'w-resize',  style: { top: '50%',  left: 0,     transform: 'translate(-50%, -50%)' } },
-  { dir: 'nw', cursor: 'nw-resize', style: { top: 0,      left: 0,     transform: 'translate(-50%, -50%)' } },
-];
-
 function generateId(kind: ComponentKind): string {
   return `${kind}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+}
+
+function clampRectToStage(
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+) {
+  const clampedWidth = Math.max(MIN_COMP_SIZE, Math.min(width, VIRTUAL_STAGE_WIDTH));
+  const clampedHeight = Math.max(MIN_COMP_SIZE, Math.min(height, VIRTUAL_STAGE_HEIGHT));
+  const clampedX = Math.min(Math.max(x, 0), Math.max(0, VIRTUAL_STAGE_WIDTH - clampedWidth));
+  const clampedY = Math.min(Math.max(y, 0), Math.max(0, VIRTUAL_STAGE_HEIGHT - clampedHeight));
+
+  return {
+    x: clampedX,
+    y: clampedY,
+    width: Math.min(clampedWidth, VIRTUAL_STAGE_WIDTH - clampedX),
+    height: Math.min(clampedHeight, VIRTUAL_STAGE_HEIGHT - clampedY),
+  };
 }
 
 export function SceneEditorPage() {
@@ -64,7 +69,6 @@ export function SceneEditorPage() {
   
   // Components de present
   const [components, setComponents] = useState<PlacedComponent[]>(activeScene?.components ?? []);
-  const isVisibelName = true;
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const historyRef = useRef<PlacedComponent[][]>([]);
   const MAX_HISTORY = 60;
@@ -126,6 +130,12 @@ export function SceneEditorPage() {
       if (Math.abs(placed.y - snapY) <= SNAP_THRESHOLD) placed.y = snapY;
     }
 
+    const boundedPlaced = clampRectToStage(placed.x, placed.y, placed.width ?? DEFAULT_COMP_W, placed.height ?? DEFAULT_COMP_H);
+    placed.x = boundedPlaced.x;
+    placed.y = boundedPlaced.y;
+    placed.width = boundedPlaced.width;
+    placed.height = boundedPlaced.height;
+
     setComponents(prev => [...prev, placed]);
     draggingKind.current = null;
   }
@@ -177,6 +187,7 @@ export function SceneEditorPage() {
     // 2. 🚀 Déplacement d'une composante existante
     if (draggingComp.current) {
       const d = draggingComp.current;
+      const draggedComp = components.find(component => component.id === d.id);
       const dx = (e.clientX - d.startMouseX) / scale; // Divisé par le scale pour suivre le zoom
       const dy = (e.clientY - d.startMouseY) / scale;
 
@@ -190,8 +201,15 @@ export function SceneEditorPage() {
         if (Math.abs(newY - snappedY) <= SNAP_THRESHOLD) newY = snappedY;
       }
 
+      const bounded = clampRectToStage(
+        newX,
+        newY,
+        draggedComp?.width ?? DEFAULT_COMP_W,
+        draggedComp?.height ?? DEFAULT_COMP_H,
+      );
+
       setComponents(prev =>
-        prev.map(c => c.id === d.id ? { ...c, x: newX, y: newY } : c)
+        prev.map(c => c.id === d.id ? { ...c, x: bounded.x, y: bounded.y } : c)
       );
       return;
     }
@@ -213,8 +231,10 @@ export function SceneEditorPage() {
     if (r.dir.includes('s')) { newH = Math.max(MIN_COMP_SIZE, r.origH + dy); }
     if (r.dir.includes('n')) { newH = Math.max(MIN_COMP_SIZE, r.origH - dy); newY = r.origY + r.origH - newH; }
 
+    const bounded = clampRectToStage(newX, newY, newW, newH);
+
     setComponents(prev =>
-      prev.map(c => c.id === r.id ? { ...c, x: newX, y: newY, width: newW, height: newH } : c)
+      prev.map(c => c.id === r.id ? { ...c, x: bounded.x, y: bounded.y, width: bounded.width, height: bounded.height } : c)
     );
   }
 
@@ -230,7 +250,8 @@ export function SceneEditorPage() {
         const snappedY = Math.round(newY / GRID_SIZE) * GRID_SIZE;
         if (Math.abs(newX - snappedX) <= SNAP_THRESHOLD) newX = snappedX;
         if (Math.abs(newY - snappedY) <= SNAP_THRESHOLD) newY = snappedY;
-        return { ...c, x: newX, y: newY };
+        const bounded = clampRectToStage(newX, newY, c.width ?? DEFAULT_COMP_W, c.height ?? DEFAULT_COMP_H);
+        return { ...c, x: bounded.x, y: bounded.y };
       }));
     }
 
@@ -417,35 +438,16 @@ export function SceneEditorPage() {
     <div className="grid h-screen overflow-hidden" style={{ gridTemplateColumns: '200px 1fr', gridTemplateRows: '48px 1fr' }}>
 
       {/* ── Top bar ───────────────────────────────────────────────────────── */}
-      <header className="col-span-2 flex items-center gap-3 px-4 bg-[#0b1121] border-b-2 border-black text-white text-sm">
-        <span className="font-bold text-lg mr-2">Managus</span>
-        <label htmlFor="scene-name" className="text-white/70 whitespace-nowrap">Scène :</label>
-        <input
-          id="scene-name"
-          value={sceneName}
-          onChange={e => setSceneName(e.target.value)}
-          placeholder="Nom de la scène..."
-          className="bg-[#2d2d3f] border border-zinc-600 rounded-md text-white px-3 py-1 w-64 outline-none focus:border-green-500 transition-colors"
-        />
-        <button
-          onClick={resetCamera}
-          className="px-3 py-1 rounded bg-zinc-700 hover:bg-zinc-600 transition-colors text-white text-xs font-semibold"
-        >
-          Recentre ({Math.round(scale * 100)}%)
-        </button>
-        <button
-          onClick={() => setShowGrid(s => !s)}
-          className={`px-3 py-1 rounded text-xs font-semibold transition-colors ${showGrid ? 'bg-blue-700 hover:bg-blue-600' : 'bg-zinc-700 hover:bg-zinc-600'} text-white`}
-        >
-          {showGrid ? 'Grille: On' : 'Grille: Off'}
-        </button>
-        <button
-          onClick={() => setSnapToGrid(s => !s)}
-          className={`px-3 py-1 rounded text-xs font-semibold transition-colors ${snapToGrid ? 'bg-purple-700 hover:bg-purple-600' : 'bg-zinc-700 hover:bg-zinc-600'} text-white`}
-        >
-          {snapToGrid ? 'Snap: On' : 'Snap: Off'}
-        </button>
-      </header>
+      <Headbar
+        sceneName={sceneName}
+        onSceneNameChange={setSceneName}
+        onResetCamera={resetCamera}
+        scale={scale}
+        showGrid={showGrid}
+        onToggleGrid={() => setShowGrid(s => !s)}
+        snapToGrid={snapToGrid}
+        onToggleSnapToGrid={() => setSnapToGrid(s => !s)}
+      />
 
       {/* ── Sidebar ───────────────────────────────────────────────────────── */}
       <Sidebar
@@ -494,95 +496,17 @@ export function SceneEditorPage() {
           )}
 
           {/* Placed components */}
-          {components.map(comp => {
-            const compW = comp.width  ?? DEFAULT_COMP_W;
-            const compH = comp.height ?? DEFAULT_COMP_H;
-            const iconSize = Math.min(Math.round(Math.min(DEFAULT_COMP_W, DEFAULT_COMP_H) * 0.58), 80);
-            const isResizable = COMPONENT_CONFIG[comp.kind].isResizable;
-            const isSelected  = selectedId === comp.id;
-
-            return (
-              <div
-                key={comp.id}
-                onMouseDown={() => setSelectedId(comp.id)}
-                className="group absolute box-border"
-                style={{
-                  left:    `${comp.x}px`,
-                  top:     `${comp.y}px`,
-                  width:   `${compW}px`,
-                  height:  `${compH}px`,
-                  borderRadius: 4,
-                  border: isSelected
-                    ? '1.5px solid #22c55e'
-                    : '1.5px solid transparent',
-                  boxShadow: isSelected ? '0 0 0 2px rgba(34,197,94,0.2)' : undefined,
-                  transition: 'border-color 0.12s',
-                  overflow: 'visible',
-                }}
-                title={comp.name}
-              >
-                {/* Per-kind renderer */}
-                {(() => {
-                  const Renderer = isResizable
-                    ? ResizableComponents[comp.kind]
-                    : NonResizableComponents[comp.kind];
-                  if (Renderer) return <Renderer comp={comp} onStartDrag={startCompDrag} showName={isVisibelName} />;
-                  return isResizable
-                    ? <div className={`w-full h-full ${COMPONENT_TEXTURES[comp.kind] || 'bg-zinc-800'}`} />
-                    : (
-                      <div onMouseDown={(e) => startCompDrag(e, comp)} className="cursor-move w-full h-full flex items-center justify-center hover:scale-110 transition-transform duration-150">
-                        <ComponentIcon kind={comp.kind} size={iconSize} />
-                      </div>
-                    );
-                })()}
-
-                {/* ── Overlay action buttons (visible on hover) ─────────── */}
-                {/* Bring forward */}
-                <button
-                  className="absolute -top-12 -right-3 p-1 bg-zinc-700 hover:bg-zinc-500 text-white rounded shadow transition-all duration-150 scale-0 opacity-0 group-hover:scale-100 group-hover:opacity-100 flex items-center justify-center z-50"
-                  onMouseDown={(e) => { e.stopPropagation(); e.preventDefault(); }}
-                  onClick={(e) => { e.stopPropagation(); bringForward(comp.id); }}
-                  title="Monter d'une couche"
-                >
-                  <ChevronUpIcon className="w-4 h-4" />
-                </button>
-
-                {/* Bring backward */}
-                <button
-                  className="absolute -top-7 -right-3 p-1 bg-zinc-700 hover:bg-zinc-500 text-white rounded shadow transition-all duration-150 scale-0 opacity-0 group-hover:scale-100 group-hover:opacity-100 flex items-center justify-center z-50"
-                  onMouseDown={(e) => { e.stopPropagation(); e.preventDefault(); }}
-                  onClick={(e) => { e.stopPropagation(); bringBackward(comp.id); }}
-                  title="Descendre d'une couche"
-                >
-                  <ChevronDownIcon className="w-4 h-4" />
-                </button>
-
-                {/* Delete */}
-                <button
-                  className="absolute -top-2 -right-3 p-1.5 bg-zinc-800 hover:bg-red-600 text-white rounded-full shadow-md border border-zinc-700 hover:border-red-500 transition-all duration-200 scale-0 opacity-0 group-hover:scale-100 group-hover:opacity-100 flex items-center justify-center z-50"
-                  onMouseDown={(e) => { e.stopPropagation(); e.preventDefault(); }}
-                  onClick={(e) => { e.stopPropagation(); removeComponent(comp.id); }}
-                  title={`Retirer ${comp.name}`}
-                >
-                  <TrashIcon className="w-4 h-4" />
-                </button>
-
-                {/* ── Resize handles (8-way) ────────────────────────────── */}
-                {isResizable && RESIZE_HANDLES.map(h => (
-                  <div
-                    key={h.dir}
-                    className="absolute w-3 h-3 bg-white border border-zinc-500 rounded-sm opacity-0 group-hover:opacity-100 hover:bg-yellow-300 transition-all z-20"
-                    style={{ cursor: h.cursor, ...h.style }}
-                    onMouseDown={(e) => {
-                      e.stopPropagation();
-                      e.preventDefault();
-                      startResize(comp.id, h.dir, e.clientX, e.clientY, comp);
-                    }}
-                  />
-                ))}
-              </div>
-            );
-          })}
+          <RenderComponents
+            components={components}
+            selectedId={selectedId}
+            showName={true}
+            onSelectComponent={setSelectedId}
+            onStartDrag={startCompDrag}
+            onStartResize={startResize}
+            onBringForward={bringForward}
+            onBringBackward={bringBackward}
+            onRemoveComponent={removeComponent}
+          />
         </div>
       </main>
     </div>
