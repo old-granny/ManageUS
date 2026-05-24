@@ -138,7 +138,14 @@ export type TimelineStep =
       duration?: number;
       startOffset?: number;
     }
-  | { id: string; type: 'wait'; trackId?: string; waitMs: number; duration?: number; startOffset?: number; };
+  | { 
+      id: string; 
+      type: 'wait'; 
+      trackId?: string; 
+      waitMs: number; 
+      duration?: number; 
+      startOffset?: number; 
+    };
 
 /** A timeline is an ordered sequence of steps bound to a specific scene */
 export interface Timeline {

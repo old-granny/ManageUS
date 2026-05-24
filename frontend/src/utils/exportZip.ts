@@ -83,32 +83,51 @@ export async function exportTimelineZip(
   const zip      = new JSZip();
   const sequence: SequenceEntry[] = [];
 
-  // Process every step – startOffset is now the absolute time position
-  zip.folder(`config/assets/`);
-
+  zip.folder('config/assets/');
 
   for (const step of timeline.steps) {
-    if (step.type === 'wait') continue;   // wait steps are timing gaps, no device task
+    if (step.type === 'wait') continue;
 
     const startTime = step.startOffset ?? 0;
     const endTime   = startTime + (step.duration ?? 1);
 
-    const comp            = scene?.components.find(c => c.id === step.componentId);
-    const ledId           = comp?.kind === 'led'   ? (comp.ledId  ?? 1) : undefined;
-    const fireId          = comp?.kind === 'flame' ? (comp.fireId ?? 1) : undefined;
-    const { task_id, args } = buildTaskEntry(step, comp, ledId, fireId);
+    if (step.type === 'action') {
+      const comp   = scene?.components.find(c => c.id === step.componentId);
+      const ledId  = comp?.kind === 'led'   ? (comp.ledId  ?? 1) : undefined;
+      const fireId = comp?.kind === 'flame' ? (comp.fireId ?? 1) : undefined;
+      const { task_id, args } = buildTaskEntry(step, comp, ledId, fireId);
 
-    sequence.push({
-      task_id,
-      start_time:        parseFloat(startTime.toFixed(3)),
-      expected_end_time: parseFloat(endTime.toFixed(3)),
-      args,
-    });
-    
-    // Add the attached media file to the ZIP under config/assets/
-    if (step.attachedFileName) {
-      const file = fileStore.get(step.id);
-      if (file) zip.file(`config/assets/${step.attachedFileName}`, file);
+      sequence.push({
+        task_id,
+        start_time:        parseFloat(startTime.toFixed(3)),
+        expected_end_time: parseFloat(endTime.toFixed(3)),
+        args,
+      });
+
+      if (step.attachedFileName) {
+        const file = fileStore.get(step.id);
+        if (file) zip.file(`config/assets/${step.attachedFileName}`, file);
+      }
+    } else if (step.type === 'group') {
+      for (const action of step.actions) {
+        const comp   = scene?.components.find(c => c.id === action.componentId);
+        const ledId  = comp?.kind === 'led'   ? (comp.ledId  ?? 1) : undefined;
+        const fireId = comp?.kind === 'flame' ? (comp.fireId ?? 1) : undefined;
+        const actionStep = { ...step, type: 'action' as const, ...action };
+        const { task_id, args } = buildTaskEntry(actionStep, comp, ledId, fireId);
+
+        sequence.push({
+          task_id,
+          start_time:        parseFloat(startTime.toFixed(3)),
+          expected_end_time: parseFloat(endTime.toFixed(3)),
+          args,
+        });
+
+        if (action.attachedFileName) {
+          const file = fileStore.get(step.id);
+          if (file) zip.file(`config/assets/${action.attachedFileName}`, file);
+        }
+      }
     }
   }
 
