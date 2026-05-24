@@ -7,6 +7,10 @@ interface HeadbarProps {
     onToggleGrid: () => void;
     snapToGrid: boolean;
     onToggleSnapToGrid: () => void;
+    onImport: () => void;
+    onReset: () => void;
+    onGoToTimeline: () => void;
+    onExport: () => void;
 }
 
 export function Headbar({
@@ -18,9 +22,12 @@ export function Headbar({
     onToggleGrid,
     snapToGrid,
     onToggleSnapToGrid,
+    onImport,
+    onExport,
+    onReset, 
+    onGoToTimeline,
 }: HeadbarProps) {
     return (
-        /* 🎛️ Fond zinc-950 et bordure fine pour s'aligner parfaitement avec la Sidebar */
         <header className="relative pr-6 col-span-2 flex items-center gap-6 bg-zinc-950 border-b border-zinc-800 text-white text-xs w-full min-h-14 shadow-md z-30 select-none">        
             <div className="w-0.25"></div>
             {/* Zone Logo épurée */}
@@ -47,7 +54,6 @@ export function Headbar({
                     value={sceneName}
                     onChange={e => onSceneNameChange(e.target.value)}
                     placeholder="Nom de la scène..."
-                    /* 🚀 h-10 force une hauteur parfaite, py-2.5 donne de l'espace au texte, et border-zinc-700/50 le rend plus visible */
                     className="bg-zinc-900/80 border border-zinc-700/50 rounded-xl text-zinc-100 h-7 w-54 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all font-medium text-xs placeholder-zinc-600 shadow-[inset_0_1px_2px_rgba(0,0,0,0.4)]"
                 />
             </div>
@@ -60,7 +66,7 @@ export function Headbar({
                         : 'bg-transparent text-zinc-400 border-zinc-700 hover:border-zinc-500 hover:text-zinc-200'
                 }`}
             >
-                Grille
+                Grid
             </button>
 
             <button
@@ -71,20 +77,48 @@ export function Headbar({
                         : 'bg-transparent text-zinc-400 border-zinc-700 hover:border-zinc-500 hover:text-zinc-200'
                 }`}
             >
-                Ancrage
+                Anchors 
             </button>
 
             <button
                 onClick={onResetCamera}
-                className="px-4 py-2 rounded text-xs font-medium bg-transparent text-zinc-400 border border-zinc-700 hover:border-zinc-500 hover:text-zinc-200 transition-colors cursor-pointer"
+                className="bg-white hover:bg-gray-100 text-gray-800 font-semibold py-2 px-4 border border-gray-400 rounded shadow"
             >
-                Recentrer
+                Recenter
             </button>
 
-            <div className="hidden lg:flex absolute right-6 top-1/2 -translate-y-1/2 items-center gap-5 whitespace-nowrap">
+            <button
+                onClick={onImport}
+                className="bg-white hover:bg-gray-100 text-gray-800 font-semibold py-2 px-4 border border-gray-400 rounded shadow"
+                >
+                Import scene
+            </button>
+
+            <button
+                onClick={onExport}
+                className="bg-white hover:bg-gray-100 text-gray-800 font-semibold py-2 px-4 border border-gray-400 rounded shadow"
+                >
+                Export scene
+            </button>
+
+            <button
+                onClick={onReset}
+                className="bg-white hover:bg-gray-100 text-gray-800 font-semibold py-2 px-4 border border-gray-400 rounded shadow"
+            >
+                Reset board
+            </button>
+                
+            <button
+                onClick={onGoToTimeline}
+                className="bg-white hover:bg-gray-100 text-gray-800 font-semibold py-2 px-4 border border-gray-400 rounded shadow"
+            >
+                Create timeline
+            </button>
+
+            <div className="hidden xl:flex absolute right-6 top-1/2 -translate-y-1/2 items-center gap-5 whitespace-nowrap">
                 <div className="flex flex-col items-end text-[10px] font-medium text-zinc-500 tracking-wider">
-                    <span>clic-droit + glisser pour naviger</span>
-                    <span>molette pour zoomer</span>
+                    <span>right click + move mouse</span>
+                    <span>mouse wheel to zoom</span>
                 </div>
                 
                 {/* Badge d'affichage du facteur d'échelle (Zoom) */}

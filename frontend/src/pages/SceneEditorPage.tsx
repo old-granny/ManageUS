@@ -356,12 +356,6 @@ export function SceneEditorPage() {
     input.click();
   }
 
-  function handleSave() {
-    const scene = buildScene();
-    dispatch({ type: 'SAVE_SCENE', scene });
-    dispatch({ type: 'SET_ACTIVE_SCENE', id: scene.id });
-    alert(`✅ Scène "${sceneName}" sauvegardée !`);
-  }
 
   function handleExport() {
     const scene = buildScene();
@@ -487,17 +481,17 @@ export function SceneEditorPage() {
         onToggleGrid={() => setShowGrid(s => !s)}
         snapToGrid={snapToGrid}
         onToggleSnapToGrid={() => setSnapToGrid(s => !s)}
+        onExport={handleExport}
+        onGoToTimeline={handleGoToTimeline}
+        onReset={resetAllComponents}
+        onImport={handleImport}
       />
 
       {/* ── Sidebar ───────────────────────────────────────────────────────── */}
       <Sidebar
         paletteKinds={PALETTE_KINDS}
         onPaletteDragStart={handlePaletteDragStart}
-        onExport={handleExport}
-        onSave={handleSave}
-        onGoToTimeline={handleGoToTimeline}
-        onReset={resetAllComponents}
-        onImport={handleImport}
+        
       />
 
       {/* ── Stage canvas ──────────────────────────────────────────────────── */}

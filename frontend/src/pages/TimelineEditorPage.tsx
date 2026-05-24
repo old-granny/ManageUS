@@ -9,6 +9,7 @@ import {
 import { ObjectCreatorTimeLine } from '../components/Timeline/ObjectCreatorTimeLine';
 import { SceneCreatorTimeLine }  from '../components/Timeline/SceneCreatorTimeLine';
 import { TrackCreatorTimeLine }  from '../components/Timeline/TrackCreatorTimeLine';
+import { HeadbarTimeLine } from '../components/Timeline/headbar';
 
 export function TimelineEditorPage() {
   const { state, dispatch } = useAppStore();
@@ -115,52 +116,16 @@ export function TimelineEditorPage() {
     const timeline = buildTimeline();
     dispatch({ type: 'SAVE_TIMELINE', timeline });
     dispatch({ type: 'SET_ACTIVE_TIMELINE', id: timeline.id });
-    alert(`âœ… Timeline "${timelineName}" sauvegardÃ©e !`);
-  }
-
-  async function handleSendToPi() {
-    if (!scene) { alert("Aucune scÃ¨ne chargÃ©e."); return; }
-
-    const timeline = buildTimeline();
-    try {
-      const { default: JSZip } = await import('jszip');
-      const zip = new JSZip();
-      zip.file('timeline.json', JSON.stringify({ scene, timeline }, null, 2));
-      for (const step of timeline.steps) {
-        if (step.type === 'action' && step.attachedFileName) {
-          const f = fileStore.current.get(step.id);
-          if (f) zip.file(step.attachedFileName, f);
-        }
-      }
-      const blob = await zip.generateAsync({ type: 'blob' });
-      const form = new FormData();
-      form.append('file', blob, 'timeline.zip');
-      const res = await fetch('http://localhost:3000/timeline/send', { method: 'POST', body: form });
-      if (res.ok) alert('Timeline envoyÃ©e au Raspberry Pi !');
-      else alert(`Erreur ${res.status} du serveur.`);
-    } catch (err) {
-      console.error(err);
-      alert("Impossible d'envoyer la timeline.\nVÃ©rifie que le serveur NestJS est dÃ©marrÃ©.");
-    }
   }
 
   return (
     <div className="timeline-editor">
 
       {/* Top bar */}
-      <header className="scene-topbar">
-        <div className="topbar-links">
-          <button className="topbar-link" onClick={handleSave}>Sauvegarder</button>
-          <button className="topbar-link" onClick={handleSendToPi}>Envoyer au Pi</button>
-          <button
-            className="topbar-link"
-            onClick={() => dispatch({ type: 'SET_PAGE', page: 'scene-editor' })}
-          >
-            Modifier la scene
-          </button>
-        </div>
-        <div className="topbar-avatar" />
-      </header>
+      <HeadbarTimeLine
+        onSave={handleSave}
+        onGoToSceneEditor={() => dispatch({ type: 'SET_PAGE', page: 'scene-editor' })}
+      />
 
       {/* Middle: object creator + scene viewer */}
       <div className="timeline-middle">
