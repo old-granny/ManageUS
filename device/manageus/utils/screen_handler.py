@@ -105,3 +105,40 @@ class VideoDisplayTask(ScreenHandler):
 
     def stop(self):
         self._playing.clear()
+
+
+class TextDisplayTask(ScreenHandler):
+    def __init__(
+        self,
+        text,
+        font_size=48,
+        text_color=(255, 255, 255),
+        bg_color=(0, 0, 0),
+        font_name=None,
+    ):
+        super().__init__()
+
+        self.text = text
+        self.bg_color = bg_color
+
+        # Create font
+        self.font = pygame.font.Font(font_name, font_size)
+
+        # Render text
+        self.text_surface = self.font.render(self.text, True, text_color)
+
+        # Create background surface
+        self.display_surface = pygame.Surface(self.screen.get_size())
+        self.display_surface.fill(self.bg_color)
+
+        # Center text
+        text_rect = self.text_surface.get_rect(
+            center=self.display_surface.get_rect().center
+        )
+
+        # Draw text onto background
+        self.display_surface.blit(self.text_surface, text_rect)
+
+    def show(self):
+        """Sets the centered text display"""
+        self.set_display_surface(self.display_surface)

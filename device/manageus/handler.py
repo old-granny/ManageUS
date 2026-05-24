@@ -90,10 +90,18 @@ class Handler:
         await self.server.add_msg(msg)
 
     async def _main_loop(self):
+        t = sc.TextDisplayTask(f"Paring number: {self.serialNumber}")
         while True:
             income = await self.server.get_msg()
             
             match income.commandId:
+                case headers.HELLO:
+                    if self.pairingCode == 0:
+                        msg = headers.Command(headers.HELLO_ACK, 0, 0, 0, [])
+                        t.remove_surface()
+                        await self.server.add_msg(msg)
+                    else:
+                        await self._send_nack()
                 case headers.START_SEQUENCE:
                     if self.engine.start_runner():
                         await self._send_ack()
@@ -109,13 +117,15 @@ class Handler:
                     await self._send_ack()
                 case _:
                     self.logger.warning("Unknown command.. ignoring")
+            
 
     async def start_handler(self):
-        
+        sc.TextDisplayTask("Checking WIFI connection...").show()
         while not await self._check_internet():
             self.logger.critical(f"No internet connection.. retrying in {self.RETRY_DELAY_S} seconds")
             await asyncio.sleep(self.RETRY_DELAY_S)
         
+        sc.TextDisplayTask("Checking Server connection...").show()
         while not await self.server.connect():
             self.logger.warning(f"Can't connect to the server right now... retrying in {self.RETRY_DELAY_S} seconds")
             await asyncio.sleep(self.RETRY_DELAY_S)
