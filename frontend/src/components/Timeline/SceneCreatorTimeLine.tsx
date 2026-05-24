@@ -19,7 +19,6 @@ export function SceneCreatorTimeLine({
   scene,
   selectedComps,
   onToggleComp,
-  isPlaying = false,
   componentStates,
 }: SceneCreatorTimeLineProps) {
   const [viewScale, setViewScale] = useState<number>(0.15);

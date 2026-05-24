@@ -220,24 +220,31 @@
 .ctrl-btn {
   background: transparent;
   border: none;
-  color: #f8fafc;
-  font-size: 20px;
+  color: #cbd5e1;
+  font-size: 16px;
   cursor: pointer;
+  padding: 5px 9px;
+  border-radius: 6px;
+  line-height: 1;
+  transition: background 0.12s, color 0.12s;
 }
-.ctrl-btn:hover { opacity: 0.8; }
+.ctrl-btn:hover { background: rgba(255,255,255,0.09); color: #f8fafc; }
 
 .btn-add-track {
   margin-left: auto;
   background: transparent;
-  border: 1px solid #475569;
-  color: #94a3b8;
+  border: 1px solid #334155;
+  color: #64748b;
   padding: 4px 12px;
-  border-radius: 4px;
+  border-radius: 5px;
   cursor: pointer;
+  font-size: 12px;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
 }
 .btn-add-track:hover {
-  background: #1e293b;
-  color: #fff;
+  background: rgba(99,102,241,0.12);
+  border-color: #6366f1;
+  color: #a5b4fc;
 }
 
 /* Grille de la timeline */
@@ -393,39 +400,43 @@
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
-  background: #2563eb;
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  border-left: 3px solid #60a5fa;
   color: #fff;
-  font-size: 12px;
-  padding: 6px 10px;
-  padding-left: 18px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 5px 10px;
+  padding-left: 16px;
   padding-right: 28px;
-  border-radius: 4px;
+  border-radius: 5px;
   display: flex;
   align-items: center;
-  gap: 10px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  gap: 8px;
+  box-shadow: 0 2px 8px rgba(37,99,235,0.35);
   white-space: nowrap;
   user-select: none;
   box-sizing: border-box;
+  letter-spacing: 0.02em;
 }
 
 .step-del {
   position: absolute;
-  right: 12px;
-  background: rgba(0,0,0,0.3);
+  right: 8px;
+  background: rgba(0,0,0,0.25);
   border: none;
-  color: #fff;
+  color: rgba(255,255,255,0.7);
   border-radius: 50%;
-  width: 16px;
-  height: 16px;
-  font-size: 11px;
+  width: 15px;
+  height: 15px;
+  font-size: 10px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 6;
+  transition: background 0.12s;
 }
-.step-del:hover { background: var(--btn-red); }
+.step-del:hover { background: #dc2626; color: #fff; }
 
 /* Zone pour attraper et étirer le bloc (Gauche) */
 .resize-handle-left {
@@ -462,13 +473,17 @@
 .track-del-btn {
   background: transparent;
   border: none;
-  color: #64748b;
+  color: #475569;
   cursor: pointer;
-  font-size: 16px;
+  font-size: 15px;
   line-height: 1;
+  padding: 2px 4px;
+  border-radius: 4px;
+  transition: color 0.12s, background 0.12s;
 }
 .track-del-btn:hover {
-  color: var(--btn-red);
+  color: #f87171;
+  background: rgba(239,68,68,0.1);
 }
 
 /* Le curseur vertical (Playhead) qui se déplace */
