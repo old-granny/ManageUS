@@ -9,11 +9,11 @@ interface SidebarProps {
 
 export function Sidebar({ paletteKinds, onPaletteDragStart, }: SidebarProps) {
   return (
-    <aside className="flex h-full w-64 flex-col items-center gap-4 pt-6 pb-6 px-4 overflow-y-auto bg-zinc-950 border-r border-zinc-800 shadow-2xl">
+    <aside className="flex h-full w-64 flex-col items-center gap-4 pt-6 pb-6 px-4 overflow-y-auto bg-[#1a2a5e] border-r border-zinc-800 shadow-2xl">
       
       <div className="w-full text-center">
         <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">
-          Palette d'Équipement
+          Equipment Palette
         </p>
       </div>
 
@@ -24,7 +24,7 @@ export function Sidebar({ paletteKinds, onPaletteDragStart, }: SidebarProps) {
             className="flex w-full max-w-[180px] flex-col items-center justify-center gap-1.5 p-3 rounded-xl bg-zinc-900 border border-zinc-800 cursor-grab select-none hover:bg-zinc-800 hover:border-zinc-700 active:cursor-grabbing transition-all duration-150 group shadow-md"
             draggable
             onDragStart={() => onPaletteDragStart(kind)}
-            title={`Glisser un(e) ${KIND_LABELS[kind]} sur la scène`}
+            title={`Slide one ${KIND_LABELS[kind]} on the scene`}
           >
             <div className="transform group-hover:scale-110 transition-transform duration-150">
               <ComponentIcon kind={kind} size={40} />
