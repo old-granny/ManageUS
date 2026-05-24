@@ -16,7 +16,6 @@ export function TimelineEditorPage() {
   const scene            = state.scenes.find(s => s.id === state.activeSceneId);
   const existingTimeline = state.timelines.find(t => t.id === state.activeTimelineId);
 
-  // â”€â”€ Shared state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const [timelineName] = useState<string>(existingTimeline?.name ?? 'Ma timeline');
   const [steps, setSteps]               = useState<TimelineStep[]>(existingTimeline?.steps ?? []);
   const [selectedComp, setSelectedComp] = useState<PlacedComponent | null>(null);
@@ -28,27 +27,26 @@ export function TimelineEditorPage() {
   const [tracks, setTracks]               = useState<{ id: string; name: string }[]>([{ id: 'track-1', name: 'Track 1' }]);
   const [selectedTrackId, setSelectedTrackId] = useState<string>('track-1');
 
-  // â”€â”€ Track management â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   function addTrack() {
     const newId = `track-${Date.now()}`;
     setTracks(prev => [...prev, { id: newId, name: `Track ${prev.length + 1}` }]);
+    setSelectedTrackId(newId); // NOUVEAU : Sélectionne automatiquement la nouvelle piste
   }
 
   function removeTrack(id: string) {
     const remaining = tracks.filter(t => t.id !== id);
     if (remaining.length > 0) {
       const fallbackId = remaining[0].id;
-      setSteps(prev => prev.map(s => s.trackId === id ? { ...s, trackId: fallbackId } : s));
+      setSteps(prev => prev.map(s => s.trackId === id ? { ...s, trackId: fallbackId } as TimelineStep : s));
     }
     setTracks(remaining);
     if (selectedTrackId === id && remaining.length > 0) setSelectedTrackId(remaining[0].id);
   }
 
   function moveStepToTrack(stepId: string, toTrackId: string) {
-    setSteps(prev => prev.map(s => s.id === stepId ? { ...s, trackId: toTrackId } : s));
+    setSteps(prev => prev.map(s => s.id === stepId ? { ...s, trackId: toTrackId } as TimelineStep : s));
   }
 
-  // â”€â”€ Step management â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   function addActionStep(action: string) {
     if (!selectedComp) return;
 
@@ -72,6 +70,10 @@ export function TimelineEditorPage() {
     };
     setSteps(prev => [...prev, step]);
     setSelectedComp(null);
+  }
+
+  function updateStep(id: string, updates: Record<string, any>) {
+    setSteps(prev => prev.map(s => s.id === id ? { ...s, ...updates } as TimelineStep : s));
   }
 
   function handleFileChosen(e: ChangeEvent<HTMLInputElement>) {
@@ -115,11 +117,11 @@ export function TimelineEditorPage() {
     const timeline = buildTimeline();
     dispatch({ type: 'SAVE_TIMELINE', timeline });
     dispatch({ type: 'SET_ACTIVE_TIMELINE', id: timeline.id });
-    alert(`âœ… Timeline "${timelineName}" sauvegardÃ©e !`);
+    alert(`✅ Timeline "${timelineName}" sauvegardée !`);
   }
 
   async function handleSendToPi() {
-    if (!scene) { alert("Aucune scÃ¨ne chargÃ©e."); return; }
+    if (!scene) { alert("Aucune scène chargée."); return; }
 
     const timeline = buildTimeline();
     try {
@@ -136,37 +138,35 @@ export function TimelineEditorPage() {
       const form = new FormData();
       form.append('file', blob, 'timeline.zip');
       const res = await fetch('http://localhost:3000/timeline/send', { method: 'POST', body: form });
-      if (res.ok) alert('Timeline envoyÃ©e au Raspberry Pi !');
+      if (res.ok) alert('Timeline envoyée au Raspberry Pi !');
       else alert(`Erreur ${res.status} du serveur.`);
     } catch (err) {
       console.error(err);
-      alert("Impossible d'envoyer la timeline.\nVÃ©rifie que le serveur NestJS est dÃ©marrÃ©.");
+      alert("Impossible d'envoyer la timeline.\nVérifie que le serveur NestJS est démarré.");
     }
   }
 
   return (
     <div className="timeline-editor">
 
-      {/* Top bar */}
       <header className="scene-topbar">
         <div className="topbar-links">
-          <button className="topbar-link" onClick={handleSave}>Sauvegarder</button>
-          <button className="topbar-link" onClick={handleSendToPi}>Envoyer au Pi</button>
+          <button className="topbar-link" onClick={handleSave}>Import</button>
+          <button className="topbar-link" onClick={handleSendToPi}>Export</button>
           <button
             className="topbar-link"
             onClick={() => dispatch({ type: 'SET_PAGE', page: 'scene-editor' })}
           >
-            Modifier la scene
+            Modify scene
           </button>
         </div>
         <div className="topbar-avatar" />
       </header>
 
-      {/* Middle: object creator + scene viewer */}
       <div className="timeline-middle">
         <ObjectCreatorTimeLine
           selectedComp={selectedComp}
-          activeTrackName={tracks.find(t => t.id === selectedTrackId)?.name ?? 'â€”'}
+          activeTrackName={tracks.find(t => t.id === selectedTrackId)?.name ?? '—'}
           onAddAction={addActionStep}
           onCancel={() => setSelectedComp(null)}
         />
@@ -177,7 +177,6 @@ export function TimelineEditorPage() {
         />
       </div>
 
-      {/* Bottom: timeline tracks */}
       <TrackCreatorTimeLine
         tracks={tracks}
         selectedTrackId={selectedTrackId}
@@ -188,9 +187,9 @@ export function TimelineEditorPage() {
         onRemoveTrack={removeTrack}
         onMoveStep={moveStepToTrack}
         onRemoveStep={removeStep}
+        onUpdateStep={updateStep}
       />
 
-      {/* Hidden file input for media attachments */}
       <input ref={fileInputRef} type="file" style={{ display: 'none' }} onChange={handleFileChosen} />
     </div>
   );

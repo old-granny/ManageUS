@@ -1,5 +1,5 @@
 ﻿/* ============================================================================
-   App.css - Graphicus Stage Manager
+   App.css - Graphicus Stage Manager (Version Complète Intégrée)
    ============================================================================ */
 
 #root {
@@ -9,6 +9,11 @@
   display:    block;
   text-align: left;
   border:     none;
+  box-sizing: border-box;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
 }
 
 :root {
@@ -107,7 +112,6 @@
   align-items: center;
 }
 
-
 /* Stage View (timeline) */
 .stage-view {
   flex: 1;
@@ -138,7 +142,7 @@
   overflow: hidden;
 }
 
-/* LumiÃ¨res (ronds gris) sur la bordure bleue marine */
+/* Lumières sur la bordure bleue marine */
 .border-lights {
   position: absolute;
   display: flex;
@@ -225,18 +229,47 @@
   overflow: hidden;
 }
 
-/* Colonne gauche (Fixe) */
+/* ============================================================================
+   ALIGNEMENT STRICT ET SCROLLBARS DE LA TIMELINE
+   ============================================================================ */
+
+/* Force des hauteurs identiques pour éviter tout décalage */
+.track-label-cell, 
+.timeline-track-data-row {
+  height: 46px;
+  min-height: 46px;
+  max-height: 46px;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+.ruler-corner-cell, 
+.timeline-ruler-row {
+  height: 30px;
+  min-height: 30px;
+  max-height: 30px;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+/* Colonne gauche (Fixe horizontalement, scrollable uniquement verticalement) */
 .timeline-labels-column {
-  width: 140px;
+  width: 160px;
   background: #090d16;
   border-right: 2px solid #000;
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
+  overflow-y: scroll !important;
+  overflow-x: hidden !important;
+  padding-bottom: 10px; /* Compense la hauteur de la scrollbar horizontale de droite */
 }
 
 .ruler-corner-cell {
-  height: 30px;
+  position: sticky;
+  top: 0;
+  z-index: 25;
+  background: #090d16;
   display: flex;
   align-items: center;
   padding-left: 12px;
@@ -248,32 +281,56 @@
 }
 
 .track-label-cell {
-  height: 46px;
   display: flex;
   align-items: center;
+  justify-content: space-between;
   padding-left: 12px;
+  padding-right: 10px;
   font-size: 13px;
   color: #f8fafc;
   border-bottom: 1px solid #334155;
+  cursor: pointer;
 }
 
-/* Colonne droite (Scrollable) */
+/* Scrollbar de gauche (Respecte exactement les mêmes styles que la droite) */
+.timeline-labels-column::-webkit-scrollbar {
+  width: 10px;   /* Même épaisseur verticale */
+  height: 0px;   /* Désactive l'horizontale */
+}
+.timeline-labels-column::-webkit-scrollbar-track {
+  background: #0b1121; /* Même couleur de fond */
+}
+.timeline-labels-column::-webkit-scrollbar-thumb {
+  background: #334155; /* Même couleur de poignée */
+  border-radius: 4px;
+}
+.timeline-labels-column::-webkit-scrollbar-thumb:hover {
+  background: #475569; /* Même hover */
+}
+
+/* Colonne droite (Scrollable dans les deux sens) */
 .timeline-scrollable-area {
   flex: 1;
-  overflow-x: auto;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
+  overflow-x: scroll !important;
+  overflow-y: scroll !important;
   background: #111827;
 }
 
-/* RÃ¨gle graduÃ©e (0.x secondes) */
+.timeline-grid-content {
+  position: relative;
+  min-width: max-content;
+  min-height: max-content;
+}
+
+/* Règle graduée (0.x secondes) */
 .timeline-ruler-row {
   display: flex;
-  height: 30px;
   background: #0f172a;
   border-bottom: 1px solid #000;
-  width: max-content; /* S'assure que la rÃ¨gle suit le contenu */
+  width: max-content;
+  position: sticky;
+  top: 0;
+  z-index: 20;
 }
 
 .ruler-tick-cell {
@@ -303,7 +360,6 @@
 .timeline-track-data-row {
   display: flex;
   align-items: center;
-  height: 46px;
   background: #1e293b;
   border-bottom: 1px solid #334155;
   padding: 0 10px;
@@ -319,22 +375,70 @@
 
 /* Blocs d'actions */
 .track-block {
+  position: relative;
   background: #2563eb;
   color: #fff;
   font-size: 12px;
   padding: 6px 10px;
+  padding-left: 18px;
+  padding-right: 28px; /* Espace pour le bouton X et la poignée */
   border-radius: 4px;
   display: flex;
   align-items: center;
   gap: 10px;
   box-shadow: 0 2px 4px rgba(0,0,0,0.2);
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
-/* Aligner le titre de la piste et son bouton X */
-.track-label-cell {
-  justify-content: space-between;
-  padding-right: 10px;
+.step-del {
+  position: absolute;
+  right: 12px;
+  background: rgba(0,0,0,0.3);
+  border: none;
+  color: #fff;
+  border-radius: 50%;
+  width: 16px;
+  height: 16px;
+  font-size: 11px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 6;
+}
+.step-del:hover { background: var(--btn-red); }
+
+/* Zone pour attraper et étirer le bloc (Gauche) */
+.resize-handle-left {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 10px;
+  cursor: ew-resize;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px 0 0 4px;
+  z-index: 5;
+}
+.resize-handle-left:hover {
+  background: rgba(255, 255, 255, 0.4);
+}
+
+/* Zone pour attraper et étirer le bloc (Droite) */
+.resize-handle-right {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 10px;
+  cursor: ew-resize;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 0 4px 4px 0;
+  z-index: 5;
+}
+.resize-handle-right:hover {
+  background: rgba(255, 255, 255, 0.4);
 }
 
 .track-del-btn {
@@ -349,56 +453,62 @@
   color: var(--btn-red);
 }
 
-/* Le curseur vertical (Playhead) qui se dÃ©place */
+/* Le curseur vertical (Playhead) qui se déplace */
 .playhead-line {
   position: absolute;
-  top: 30px; /* Commence juste en dessous de la règle graduée (qui fait 30px) */
+  top: 30px; /* Commence sous la règle */
   bottom: 0;
-  width: 14px; /* Hitbox plus large pour attraper facilement */
-  margin-left: -7px; /* Centrer la hitbox sur le temps exact */
-  cursor: ew-resize; /* Curseur de glissement horizontal */
-  z-index: 10;
-  /* On a retiré pointer-events: none; pour qu'il soit cliquable */
+  width: 14px;
+  margin-left: -7px;
+  cursor: ew-resize;
+  z-index: 15; /* Glisse derrière la règle graduée */
 }
 
-/* La ligne rouge visuelle */
 .playhead-line::after {
   content: '';
   position: absolute;
   top: 0;
   bottom: 0;
-  left: 6px; /* Centré à l'intérieur de la hitbox de 14px */
+  left: 6px;
   width: 2px;
   background: var(--btn-red);
-  z-index: 10;
-  pointer-events: none; /* EmpÃªche la ligne de bloquer les clics en dessous */
+  pointer-events: none;
 }
 
-/* Le petit triangle en haut de la ligne rouge */
-.playhead-line::before {
-  content: '';
+/* La tête du Playhead (Maintenant intégrée dans la règle sticky) */
+.playhead-head {
   position: absolute;
   top: 0;
-  left: 2px; /* Centré par rapport à la ligne (6px - 4px de bordure) */
+  bottom: 0;
+  width: 14px;
+  margin-left: -7px;
+  cursor: ew-resize;
+  z-index: 31; /* Toujours visible au-dessus */
+}
+
+.playhead-head::before {
+  content: '';
+  position: absolute;
+  bottom: 0; /* S'aligne parfaitement avec la ligne */
+  left: 2px;
   border-left: 5px solid transparent;
   border-right: 5px solid transparent;
   border-top: 6px solid var(--btn-red);
-  z-index: 11;
 }
 
-/* Scrollbar (Webkit) */
+/* Scrollbar de droite (Cache la verticale, affiche l'horizontale) */
 .timeline-scrollable-area::-webkit-scrollbar {
-  height: 10px;
-  width: 10px;
+  width: 0px;   
+  height: 10px; 
 }
-.timeline-scrollable-area::-webkit-scrollbar-track {
+.timeline-scrollable-area::-webkit-scrollbar-track:horizontal {
   background: #0b1121;
 }
-.timeline-scrollable-area::-webkit-scrollbar-thumb {
+.timeline-scrollable-area::-webkit-scrollbar-thumb:horizontal {
   background: #334155;
   border-radius: 4px;
 }
-.timeline-scrollable-area::-webkit-scrollbar-thumb:hover {
+.timeline-scrollable-area::-webkit-scrollbar-thumb:horizontal:hover {
   background: #475569;
 }
 
@@ -426,9 +536,6 @@
 .btn-ghost     { background: transparent; color: rgba(255,255,255,.6); }
 .btn-sm        { padding: 5px 12px; font-size: 12px; }
 
-
-
-
 .bg-texture-scene {
   background-color: #1a1a1e;
   background-size: 20px 20px;
@@ -438,13 +545,11 @@
   border: 2px dashed #3b82f6;
 }
 
-/* ðŸ”Š Exemple de texture pour un Haut-Parleur (si tu voulais lui mettre un fond texturÃ© un jour) */
 .bg-texture-speaker {
   background: radial-gradient(circle, #333 20%, transparent 20%), #222;
   background-size: 4px 4px;
 }
 
-/* ðŸ”¥ Texture pour les effets ou zones de Flammes (DÃ©gradÃ© d'alerte chaud) */
 .bg-texture-flame {
   background: repeating-linear-gradient(45deg, #2a1405, #2a1405 10px, #3b1d04 10px, #3b1d04 20px);
   border: 2px dashed #f97316;
