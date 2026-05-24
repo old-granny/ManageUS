@@ -38,18 +38,18 @@ function buildTaskEntry(
       return { task_id: 'rope', args: { mode: action === 'PULL' ? 'UP' : 'DOWN' } };
 
     case 'speaker':
-      // AudioTask expects { file: "sounds/xxx.mp3" }
+      // AudioTask expects { file: "config/assets/sounds/xxx.mp3" }
       if (action === 'PLAY' && step.attachedFileName) {
-        return { task_id: 'audio', args: { file: step.attachedFileName } };
+        return { task_id: 'audio', args: { file: `config/assets/${step.attachedFileName}` } };
       }
       return { task_id: 'audio', args: { mode: action } };
 
     case 'projector':
-      // ScreenTask expects { MEDIA_TYPE: "IMAGE", PATH: "images/xxx.png", ID: name }
+      // ScreenTask expects { MEDIA_TYPE: "IMAGE", PATH: "config/assets/images/xxx.png", ID: name }
       if (action === 'SHOW' && step.attachedFileName) {
         return {
           task_id: 'screen',
-          args: { MEDIA_TYPE: 'IMAGE', PATH: step.attachedFileName, ID: name },
+          args: { MEDIA_TYPE: 'IMAGE', PATH: `config/assets/${step.attachedFileName}`, ID: name },
         };
       }
       return { task_id: 'screen', args: { mode: action, ID: name } };
@@ -63,11 +63,12 @@ function buildTaskEntry(
 
 /**
  * Builds a ZIP file containing:
- *   steps.json         — the sequence in the device JSON format
- *   images/<file>      — every image attached to a SHOW step
- *   sounds/<file>      — every audio file attached to a PLAY step
+ *   config/config.json      — the sequence in the device JSON format
+ *   config/assets/images/   — every image attached to a SHOW step
+ *   config/assets/sounds/   — every audio file attached to a PLAY step
  *
- * Then triggers a browser download of <timelineName>.zip.
+ * Triggers a browser download AND uploads the ZIP to the backend
+ * at POST /manager/upload so the backend can relay it to the device.
  */
 export async function exportTimelineZip(
   timeline:     Timeline,
@@ -95,10 +96,10 @@ export async function exportTimelineZip(
       args,
     });
 
-    // Add the attached media file to the ZIP
+    // Add the attached media file to the ZIP under config/assets/
     if (step.attachedFileName) {
       const file = fileStore.get(step.id);
-      if (file) zip.file(step.attachedFileName, file);
+      if (file) zip.file(`config/assets/${step.attachedFileName}`, file);
     }
   }
 
@@ -116,10 +117,21 @@ export async function exportTimelineZip(
     2,
   );
 
-  zip.file('steps.json', json);
+  zip.file('config/config.json', json);
 
-  // ── Generate and download ─────────────────────────────────────────────────
+  // ── Generate blob ─────────────────────────────────────────────────────────
   const blob = await zip.generateAsync({ type: 'blob' });
+
+  // ── Upload to backend ─────────────────────────────────────────────────────
+  try {
+    const formData = new FormData();
+    formData.append('file', blob, 'config.zip');
+    await fetch('http://localhost:3000/manager/upload', { method: 'POST', body: formData });
+  } catch {
+    // upload failure is non-fatal — local download still proceeds
+  }
+
+  // ── Trigger browser download ──────────────────────────────────────────────
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement('a');
   a.href     = url;

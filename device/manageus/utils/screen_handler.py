@@ -158,6 +158,9 @@ class ImageDisplayTask:
     def show(self):
         self.screen.show_image(self.path)
 
+    def remove_surface(self):
+        self.screen.clear()
+
 
 
 class VideoDisplayTask:

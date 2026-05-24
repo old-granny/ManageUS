@@ -1,5 +1,4 @@
 from manageus.runner.base_task import Task
-import pygame
 from manageus.utils.screen_handler import VideoDisplayTask, ImageDisplayTask
 import time
 import logging
@@ -9,7 +8,6 @@ class ScreenTask(Task):
     CONFIG_DIR = "./config/output"
     def __init__(self, startTime, expectedEndTime, args):
         super().__init__(startTime, expectedEndTime, args)
-        self.screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
     
 
     def run(self):

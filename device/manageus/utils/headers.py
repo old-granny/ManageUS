@@ -35,5 +35,5 @@ class Command:
         size = struct.calcsize(cls.fmt)
         commandId, flags, reserved, payloadLength = struct.unpack(cls.fmt, raw[:size])
         payload = raw[size:]
-        return cls(commandId, flags, reserved, payloadLength, raw)
+        return cls(commandId, flags, reserved, payloadLength, payload)
     
