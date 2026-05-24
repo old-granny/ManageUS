@@ -15,9 +15,18 @@ export class ProtocolGateway implements OnGatewayConnection, OnGatewayDisconnect
     this.logger.log('Client connected');
     this.protocolService.registerClient(client)
     client.on('message', (data: Buffer) => {
+      this.logger.log("RECEIVE A MESSAGE");
       const cmd = CommandDto.unpack(data);
       this.route(client, cmd);
     });
+
+    client.on('error', (err) => {
+    this.logger.error(err);
+  });
+
+  client.on('close', () => {
+    this.logger.log('Socket closed');
+  }); 
   }
 
   handleDisconnect(client: WebSocket) {

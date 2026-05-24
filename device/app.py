@@ -20,7 +20,7 @@ def start_async_loop(loop):
 
 async def main():
     logging.info("DEVICE APP STARTED")
-    app = hadl.Handler("ws://localhost:3000/ws", 123456)
+    app = hadl.Handler("ws://10.168.70.217:3000/ws", 123456)
     
     await app.start_handler()
 

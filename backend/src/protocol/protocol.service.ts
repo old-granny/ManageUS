@@ -22,6 +22,7 @@ export class ProtocolService {
   }
 
   getSessionBySerial(serialNumber: number): ISession | undefined {
+    this.logger.log(this.sessions);
     return [...this.sessions.values()].find(s => s.deviceState?.serial_number === serialNumber);
   }
 
@@ -61,10 +62,10 @@ export class ProtocolService {
         `HEARTBEAT — serial: ${device.serial_number} | state: ${EDeviceState[device.state]} | pairing: ${device.pairing}`
       );
 
-      client.send(new CommandDto({ commandId: CommandId.ACK }).pack());
+      //client.send(new CommandDto({ commandId: CommandId.ACK }).pack());
     } catch (e) {
       this.logger.error('Failed to parse HEARTBEAT payload', e);
-      client.send(new CommandDto({ commandId: CommandId.NACK }).pack());
+      //client.send(new CommandDto({ commandId: CommandId.NACK }).pack());
     }
   }
 

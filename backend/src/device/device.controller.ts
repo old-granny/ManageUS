@@ -9,4 +9,9 @@ export class DeviceController {
     sendHello(@Param('serial') serial:string){
         return this.serv.pairWithDevice(Number(serial));
     }
+
+    @Post(":serial/start")
+    sendStart(@Param('serial') serial:string){
+        return this.serv.startSequence(Number(serial));
+    }
 };
