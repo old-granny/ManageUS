@@ -4,13 +4,23 @@ import logging
 import asyncio
 import dotenv
 import manageus.handler as hadl
+import manageus.utils.screen_handler as sc
+import threading
+
+import os
+os.environ["SDL_VIDEODRIVER"] = "x11"
 
 LOGGING_LEVEL = logging.DEBUG
-LOGGING_FILE = "logs/app.log"
+LOGGING_FILE = "app.log"
+
+def start_async_loop(loop):
+    """Sets the event loop for the background thread and runs it forever."""
+    asyncio.set_event_loop(loop)
+    loop.run_forever()
 
 async def main():
     logging.info("DEVICE APP STARTED")
-    app = hadl.Handler("", 123456)
+    app = hadl.Handler("ws://localhost:3000/ws", 123456)
     
     await app.start_handler()
 
@@ -26,4 +36,18 @@ if __name__ == '__main__':
             logging.FileHandler(LOGGING_FILE, mode='a')
         ]
     )
-    asyncio.run(main())
+    screen = sc.ScreenHandler()
+    
+    # 2. Setup background asyncio thread
+    background_loop = asyncio.new_event_loop()
+    async_thread = threading.Thread(
+        target=start_async_loop, 
+        args=(background_loop,), 
+        daemon=True
+    )
+    async_thread.start()
+
+    asyncio.run_coroutine_threadsafe(main(), background_loop)
+
+    
+    screen.run()

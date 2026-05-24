@@ -1,5 +1,5 @@
-from runner.task import Task
-import utils.gpio as gpio
+from manageus.runner.base_task import Task
+import manageus.utils.gpio as gpio
 
 
 class LightTask(Task):

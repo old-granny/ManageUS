@@ -1,9 +1,9 @@
 import logging
 import threading
 import queue
-import utils.headers as headers
+import manageus.utils.headers as headers
 from enum import Enum
-import runner.config as config
+import manageus.runner.config as config
 import time
 
 class EngineCode(Enum):
@@ -11,6 +11,7 @@ class EngineCode(Enum):
     ENGINE_STILL_RUNNING_CODE = 1
     ENGINE_INTERRUPT = -1
     ENGINE_WRONG_CONFIG = -2
+    ENGINE_ERROR = -3
 
 class Engine:
 
@@ -40,7 +41,7 @@ class Engine:
         
         return self.runnerExitCode
     
-    def arranged_task_frame(self, tasks: list[config.task.Task], runtimeTick: float, frameBuffSecond: float = 3.0) -> dict:
+    def arranged_task_frame(self, tasks: list[config.task.tasks.Task], runtimeTick: float, frameBuffSecond: float = 3.0) -> dict:
         window_end = runtimeTick + frameBuffSecond
         frame: dict[float, list] = {}
         cnt = 0
@@ -55,45 +56,71 @@ class Engine:
 
 
     def _runner(self):
+        self.logger.debug("ENGINE RUNNER ON")
         conf = config.Config()
         retCode = conf.read()
         if retCode < 0:
             self.erno = retCode
             self.runnerExitCode = EngineCode.ENGINE_WRONG_CONFIG
             return
+        try:
+            tasks = sorted(conf.get_tasks(), key=lambda t: t.startTime)
 
-        tasks = sorted(conf.get_tasks(), key=lambda t: t.startTime)
+            runnerTime      = 0.0
+            frameBuffSecond = 3.0
+            task_cursor     = 0
 
-        runnerTime      = 0.0
-        frameBuffSecond = 3.0
-        task_cursor     = 0
+            frame, cnt          = self.arranged_task_frame(tasks[task_cursor:], runnerTime, frameBuffSecond)
+            next_recompute = runnerTime + frameBuffSecond
+            self.logger.debug(f"Frame: {frame}")
+            while not self.stopEvent.is_set():
 
-        frame, cnt          = self.arranged_task_frame(tasks[task_cursor:], runnerTime, frameBuffSecond)
-        next_recompute = runnerTime + frameBuffSecond
+                if runnerTime >= next_recompute:
+                    task_cursor += cnt
 
-        while not self.stopEvent.is_set():
-            time.sleep(0.1)
-            runnerTime += 0.1
+                    if task_cursor < len(tasks):
+                        frame, cnt = self.arranged_task_frame(
+                            tasks[task_cursor:],
+                            runnerTime,
+                            frameBuffSecond
+                        )
 
-            if runnerTime >= next_recompute:
-                task_cursor   += cnt  # skip all tasks from the exhausted frame
-                frame,cnt          = self.arranged_task_frame(tasks[task_cursor:], runnerTime, frameBuffSecond)
-                next_recompute = runnerTime + frameBuffSecond
-            
-            if task_cursor >= len(tasks):
-                break
+                        next_recompute = runnerTime + frameBuffSecond
 
-            if runnerTime in frame:
-                for task in frame[runnerTime]:
-                    if self.stopEvent.is_set():
+                # all tasks scheduled
+                if task_cursor >= len(tasks):
+                    all_done = all(not t.is_running() for t in tasks)
+
+                    if all_done:
                         break
-                    if not task.is_running():
-                        threading.Thread(target=task.run, daemon=True).start()
-        
-        if not self.stopEvent:
+
+                self.logger.debug(f"Frame: {frame} at {runnerTime}")
+
+                EPSILON = 0.05
+
+                for scheduled_time in frame:
+                    if abs(runnerTime - scheduled_time) < EPSILON:
+                        for task in frame[scheduled_time]:
+                            self.logger.info("STARTING SCHEDULED TASK")
+                            if self.stopEvent.is_set():
+                                break
+
+                            if not task.is_running():
+                                threading.Thread(
+                                    target=task.run,
+                                    daemon=True
+                                ).start()
+                time.sleep(0.1)
+                runnerTime += 0.1
+        except Exception as e:
+            self.logger.error(f"Fail with the engine Sequence {e}")
+            self.runnerExitCode = EngineCode.ENGINE_ERROR
+        if not self.stopEvent.is_set():
             self.runnerExitCode = EngineCode.ENGINE_SUCCESS
         else:
             self.runnerExitCode = EngineCode.ENGINE_INTERRUPT
+        
+        self.logger.info(f"EXIT CODE {self.runnerExitCode}")
 
 
     def download_config(self, payload: bytes):
@@ -105,6 +132,7 @@ class Engine:
             self.logger.warning("Runner already running! Ignoring the command")
             return False
         self.stopEvent.clear()
+        self.runner = threading.Thread(target=self._runner, daemon=True)
         self.runner.start()
         return True
 

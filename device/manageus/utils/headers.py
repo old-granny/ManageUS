@@ -1,6 +1,5 @@
 import struct
 from dataclasses import dataclass
-from typing import ClassVar
 
 
 HELLO = 0x01
