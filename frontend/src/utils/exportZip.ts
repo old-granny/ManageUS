@@ -78,9 +78,9 @@ export async function exportTimelineZip(
   scene:        Scene | undefined,
   fileStore:    Map<string, File>,
   timelineName: string,
-  opts: { download?: boolean } = {},
+  opts: { download?: boolean; upload?: boolean } = {},
 ): Promise<void> {
-  const { download = true } = opts;
+  const { download = true, upload = false } = opts;
   const zip      = new JSZip();
   const sequence: SequenceEntry[] = [];
 
@@ -93,9 +93,12 @@ export async function exportTimelineZip(
     const endTime   = startTime + (step.duration ?? 1);
 
     if (step.type === 'action') {
-      const comp   = scene?.components.find(c => c.id === step.componentId);
-      const ledId  = comp?.kind === 'led'   ? (comp.ledId  ?? 1) : undefined;
-      const fireId = comp?.kind === 'flame' ? (comp.fireId ?? 1) : undefined;
+      // Skip steps whose component was deleted from the scene
+      const comp = scene?.components.find(c => c.id === step.componentId);
+      if (!comp) continue;
+
+      const ledId  = comp.kind === 'led'   ? (comp.ledId  ?? 1) : undefined;
+      const fireId = comp.kind === 'flame' ? (comp.fireId ?? 1) : undefined;
       const { task_id, args } = buildTaskEntry(step, comp, ledId, fireId);
 
       sequence.push({
@@ -111,9 +114,12 @@ export async function exportTimelineZip(
       }
     } else if (step.type === 'group') {
       for (const action of step.actions) {
-        const comp   = scene?.components.find(c => c.id === action.componentId);
-        const ledId  = comp?.kind === 'led'   ? (comp.ledId  ?? 1) : undefined;
-        const fireId = comp?.kind === 'flame' ? (comp.fireId ?? 1) : undefined;
+        // Skip individual group actions whose component was deleted from the scene
+        const comp = scene?.components.find(c => c.id === action.componentId);
+        if (!comp) continue;
+
+        const ledId  = comp.kind === 'led'   ? (comp.ledId  ?? 1) : undefined;
+        const fireId = comp.kind === 'flame' ? (comp.fireId ?? 1) : undefined;
         const actionStep = { ...step, type: 'action' as const, ...action };
         const { task_id, args } = buildTaskEntry(actionStep, comp, ledId, fireId);
 
@@ -151,13 +157,15 @@ export async function exportTimelineZip(
   // ── Generate blob ─────────────────────────────────────────────────────────
   const blob = await zip.generateAsync({ type: 'blob' });
 
-  // ── Upload to backend ─────────────────────────────────────────────────────
-  const formData = new FormData();
-  formData.append('file', blob, 'config.zip');
-  const url_base = configData.HOSTNAME;
-  const uploadRes = await fetch(`${url_base}/manager/upload`, { method: 'POST', body: formData });
-  if (!uploadRes.ok) {
-    throw new Error(`Upload failed: ${uploadRes.status}`);
+  // ── Upload to backend (only when explicitly requested) ──────────────────
+  if (upload) {
+    const formData = new FormData();
+    formData.append('file', blob, 'config.zip');
+    const url_base = configData.HOSTNAME;
+    const uploadRes = await fetch(`${url_base}/manager/upload`, { method: 'POST', body: formData });
+    if (!uploadRes.ok) {
+      throw new Error(`Upload failed: ${uploadRes.status}`);
+    }
   }
 
   // ── Trigger browser download (optional) ──────────────────────────────────

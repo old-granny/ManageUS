@@ -51,8 +51,12 @@ export function HeadbarTimeLine({ onSave, onUpload, onGoToSceneEditor }: Headbar
     setSendState('sending');
     setErrorMsg('');
     try {
-      await onUpload();
       const url_base = configData.HOSTNAME;
+      // Stop any running sequence first so the device is ready for a new config
+      if (sequenceState === 'running') {
+        try { await fetch(`${url_base}/manager/stop`, { method: 'POST' }); } catch { /* best-effort */ }
+      }
+      await onUpload();
       const res = await fetch(`${url_base}/manager/send`, { method: 'POST' });
       if (res.ok) {
         setSendState('sent');
@@ -61,15 +65,27 @@ export function HeadbarTimeLine({ onSave, onUpload, onGoToSceneEditor }: Headbar
         setSendState('error');
         try {
           const body = await res.json();
-          setErrorMsg(body.message ?? `Sent failed (${res.status})`);
+          setErrorMsg(body.message ?? `Send failed (${res.status})`);
         } catch {
-          setErrorMsg(`Sent failed (${res.status})`);
+          setErrorMsg(`Send failed (${res.status})`);
         }
       }
     } catch {
       setSendState('error');
-      setErrorMsg("failed to send data");
+      setErrorMsg('Failed to send timeline');
     }
+  }
+
+  function handleDisconnect() {
+    try {
+      const url_base = configData.HOSTNAME;
+      fetch(`${url_base}/manager/reset`, { method: 'POST' });
+    } catch { /* best-effort */ }
+    setConnectionState('idle');
+    setSendState('idle');
+    setSequenceState('ready');
+    setErrorMsg('');
+    setManagerCode('');
   }
 
   async function handleStart() {
@@ -153,25 +169,20 @@ export function HeadbarTimeLine({ onSave, onUpload, onGoToSceneEditor }: Headbar
 
           <div className="w-px h-5 bg-zinc-700 shrink-0" />
 
-          {(sendState === 'idle' || sendState === 'error') && (
-            <>
-              <button onClick={handleSendTimeline} className={`${btn} bg-blue-600 text-white border-blue-600 hover:bg-blue-500`}>
-                Send timeline
-              </button>
-              {sendState === 'error' && <span className="text-red-400">{errorMsg}</span>}
-            </>
-          )}
+          {/* Send timeline — always available, stops current sequence first */}
+          <button
+            onClick={handleSendTimeline}
+            disabled={sendState === 'sending'}
+            className={`${btn} bg-blue-600 text-white border-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed`}
+          >
+            {sendState === 'sending' ? 'Sending…' : sendState === 'sent' ? 'Re-send timeline' : 'Send timeline'}
+          </button>
+          {sendState === 'error' && <span className="text-red-400">{errorMsg}</span>}
 
-          {sendState === 'sending' && (
-            <span className="text-zinc-400 animate-pulse">Sending...</span>
-          )}
-
+          {/* Sequence controls — only after a successful send */}
           {sendState === 'sent' && (
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-blue-400" />
-                <span className="text-blue-300 font-medium">Timeline sent!</span>
-              </div>
+            <>
+              <div className="w-px h-5 bg-zinc-700 shrink-0" />
 
               {sequenceState === 'ready' && (
                 <button onClick={handleStart} className={`${btn} bg-emerald-600 text-white border-emerald-600 hover:bg-emerald-500`}>
@@ -183,7 +194,7 @@ export function HeadbarTimeLine({ onSave, onUpload, onGoToSceneEditor }: Headbar
                 <>
                   <div className="flex items-center gap-1.5">
                     <span className="w-2 h-2 rounded-full bg-yellow-400 animate-pulse" />
-                    <span className="text-yellow-300 font-medium">En cours</span>
+                    <span className="text-yellow-300 font-medium">Running</span>
                   </div>
                   <button onClick={handleStop} className={`${btn} bg-transparent text-zinc-300 border-zinc-600 hover:bg-zinc-700 hover:border-zinc-500`}>
                     Stop
@@ -193,7 +204,7 @@ export function HeadbarTimeLine({ onSave, onUpload, onGoToSceneEditor }: Headbar
 
               {sequenceState === 'stopped' && (
                 <>
-                  <span className="text-zinc-400">ArrÃªtÃ©e</span>
+                  <span className="text-zinc-400">Arrêtée</span>
                   <button onClick={handleStart} className={`${btn} bg-emerald-600 text-white border-emerald-600 hover:bg-emerald-500`}>
                     Continue
                   </button>
@@ -205,8 +216,19 @@ export function HeadbarTimeLine({ onSave, onUpload, onGoToSceneEditor }: Headbar
                   Reset
                 </button>
               )}
-            </div>
+            </>
           )}
+
+          <div className="w-px h-5 bg-zinc-700 shrink-0" />
+
+          {/* Disconnect — stops connection and returns to the connect form */}
+          <button
+            onClick={handleDisconnect}
+            className={`${btn} bg-transparent text-red-400 border-red-800 hover:bg-red-950 hover:border-red-600`}
+          >
+            Disconnect
+          </button>
+
         </div>
       )}
 

@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useMemo } from 'react';
 import { type PlacedComponent, type TimelineStep } from '../../types';
 
 interface Track { id: string; name: string; }
@@ -15,6 +15,7 @@ interface TrackCreatorTimeLineProps {
   onRemoveStep:       (id: string) => void;
   onUpdateStep:       (id: string, updates: Record<string, any>) => void;
   onBumpToNewTrack:   (stepId: string) => void;
+  onPlaybackChange?:  (playing: boolean, states: Map<string, string>) => void;
 }
 
 const PIXELS_PER_SECOND = 80;
@@ -32,6 +33,7 @@ export function TrackCreatorTimeLine({
   onRemoveStep,
   onUpdateStep,
   onBumpToNewTrack,
+  onPlaybackChange,
 }: TrackCreatorTimeLineProps) {
   const [isPlaying,   setIsPlaying]   = useState<boolean>(false);
   const [currentTime, setCurrentTime] = useState<number>(0);
@@ -70,6 +72,36 @@ export function TrackCreatorTimeLine({
   useEffect(() => { onBumpToNewTrackRef.current  = onBumpToNewTrack; }, [onBumpToNewTrack]);
   useEffect(() => { stepsRef.current             = steps;            }, [steps]);
   useEffect(() => { tracksRef.current            = tracks;           }, [tracks]);
+
+  // Live component states (last fired action per component at current time)
+  // "Last action wins" — mirrors the physical device: once a component is
+  // turned ON it stays ON until an explicit OFF action fires.
+  const componentStates = useMemo(() => {
+    const map = new Map<string, string>();
+    [...steps]
+      .filter(s => (s.startOffset ?? 0) <= currentTime)
+      .sort((a, b) => (a.startOffset ?? 0) - (b.startOffset ?? 0))
+      .forEach(s => {
+        if (s.type === 'action') map.set(s.componentId, s.action);
+        else if (s.type === 'group') s.actions.forEach(a => map.set(a.componentId, a.action));
+      });
+    return map;
+  }, [steps, currentTime]);
+
+  // Stable string key - only changes value when a step actually fires,
+  // so the effect below does NOT fire on every animation frame
+  const componentStatesKey = useMemo(
+    () => JSON.stringify([...componentStates.entries()].sort()),
+    [componentStates],
+  );
+
+  const onPlaybackChangeRef = useRef(onPlaybackChange);
+  useEffect(() => { onPlaybackChangeRef.current = onPlaybackChange; }, [onPlaybackChange]);
+
+  useEffect(() => {
+    onPlaybackChangeRef.current?.(isPlaying, componentStates);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isPlaying, componentStatesKey]);
 
   // ── Timeline scale ─────────────────────────────────────────────────────────
   const maxTrackTime = steps.reduce((max, s) =>
@@ -509,7 +541,7 @@ export function TrackCreatorTimeLine({
                           onMouseDown={e => e.stopPropagation()}
                           onClick={() => onRemoveStep(step.id)}
                         >
-                          ×
+                          x
                         </button>
 
                         <div
