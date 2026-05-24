@@ -1,4 +1,4 @@
-from runner.task import Task
+from manageus.runner.base_task import Task
 from playsound import playsound
 
 class AudioTask(Task):

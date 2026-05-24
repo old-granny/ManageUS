@@ -1,7 +1,7 @@
 import asyncio
 import logging
 import websockets.asyncio.client as ws
-import headers
+import manageus.utils.headers as headers
 
 class SocketClient:
     
@@ -26,6 +26,8 @@ class SocketClient:
         try:
             self.connection = await ws.connect(self.url)
             self.logger.info("Connection ready")
+            asyncio.create_task(self._send())
+            asyncio.create_task(self._read())
             return True
         except Exception as e:
             self.logger.error(f"Can't connect to the {self.url}: {e}")
@@ -55,15 +57,24 @@ class SocketClient:
         return await self.rcvQueue.get()
 
     async def _send(self):
+        self.logger.info("SEND LOOP")
+        errCnt = 0
         while True:
             try:
                 msg = await self.sendQueue.get()
                 await self.connection.send(msg.pack())
             except Exception as e:
                 self.logger.error(f"Failing sending message: {e}")
+                errCnt +=1
+
+                if errCnt > 5:
+                    self.logger.critical("Reach maximum sending error")
+                    break
     
 
     async def _read(self):
+        self.logger.info("READ LOOP")
+        errCnt = 0
         while True:
             try:
                 raw = await self.connection.recv(False)
@@ -71,3 +82,7 @@ class SocketClient:
                 await self.rcvQueue.put(cmd)
             except Exception as e:
                 self.logger.error(f"Fail reading the message: {e}")
+                errCnt +=1
+                if errCnt > 5:
+                    self.logger.critical("Reach maximum Reading error")
+                    break

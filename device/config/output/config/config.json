@@ -1,0 +1,16 @@
+{
+    "scene_name": "Test",
+    "file_version": "0.1",
+    "sequence": [
+        {
+            "task_id": "screen",
+            "start_time": 0.0,
+            "expected_end_time": 15.0,
+            "args": {
+                "MEDIA_TYPE": "IMG",
+            	"PATH": "test.png",
+            	"ID": "screen2"
+            }
+        }
+    ]
+}

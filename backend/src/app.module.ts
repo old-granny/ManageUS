@@ -1,10 +1,11 @@
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { TimelineModule } from './timeline/timeline.module';
+import { DeviceModule } from './device/device.module';
+import { ProtocolModule } from './protocol/protocol.module';
 
 @Module({
-  imports: [TimelineModule],
+  imports: [DeviceModule, ProtocolModule],
   controllers: [AppController],
   providers: [AppService],
 })

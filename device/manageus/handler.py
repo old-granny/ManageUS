@@ -2,12 +2,12 @@ import logging
 import asyncio
 from enum import Enum
 
-import utils.socket_client as sock
-import utils.headers as headers
-import engine as en
+import manageus.utils.socket_client as sock
+import manageus.utils.headers as headers
+import manageus.engine as en
 import json
-import utils.gpio as gpio
-import utils.screen_handler as sc
+import manageus.utils.gpio as gpio
+import manageus.utils.screen_handler as sc
 
 class Handler:
     class HandlerState(Enum):
@@ -30,10 +30,6 @@ class Handler:
         self.pairingCode = 0
         self.logger.info(f"Handler instancied for {self.serialNumber}")
         self._setup_gpio()
-        self._setup_screen()
-
-    def _setup_screen(self):
-        sc.ScreenHandler()
 
     def _setup_gpio(self):
         gpio.setmode(gpio.BCM)
@@ -64,12 +60,13 @@ class Handler:
         while True:
             heartBeatMsg = {
                 "serial_number": self.serialNumber,
-                "state": self.state,
+                "state": self.state.value,
                 "pairing": self.pairingCode
             }
 
             msg = headers.Command(headers.HEARTBEAT, 0, 0, 0, json.dumps(heartBeatMsg).encode())
             await self.server.add_msg(msg)
+            #self.logger.debug("HEART BEAT SENT")
             await asyncio.sleep(self.HEART_BEAT_DELAY_S)
 
 
@@ -79,26 +76,29 @@ class Handler:
         while True:
             engineMsg = self.engine.get_msg()
             if engineMsg is not None:
-                self.server.add_msg(engineMsg)
+                await self.server.add_msg(engineMsg)
+            await asyncio.sleep(0)
 
     async def _send_ack(self):
-        msg = headers.Command(headers.ACK, 0, 0, 0, [])
+        msg = headers.Command(headers.ACK, 0, 0, 0, b'')
         await self.server.add_msg(msg)
 
     async def _send_nack(self):
-        msg = headers.Command(headers.NACK, 0, 0, 0, [])
+        msg = headers.Command(headers.NACK, 0, 0, 0, b'')
         await self.server.add_msg(msg)
 
     async def _main_loop(self):
-        t = sc.TextDisplayTask(f"Paring number: {self.serialNumber}")
+        sc.TextDisplayTask(f"Paring number: {self.serialNumber}").show()
+        self.logger.info("MAIN LOOP STARTED")
         while True:
             income = await self.server.get_msg()
             
             match income.commandId:
                 case headers.HELLO:
                     if self.pairingCode == 0:
-                        msg = headers.Command(headers.HELLO_ACK, 0, 0, 0, [])
-                        t.remove_surface()
+                        self.pairingCode = self.serialNumber
+                        msg = headers.Command(headers.HELLO_ACK, 0, 0, 0,b'')
+                        sc.TextDisplayTask("READY").show()
                         await self.server.add_msg(msg)
                     else:
                         await self._send_nack()
@@ -113,7 +113,7 @@ class Handler:
                     else:
                         await self._send_nack()
                 case headers.DOWNLOAD_SEQUENCE:
-                    await asyncio.to_thread(self.engine.download_config(income.payload))
+                    await asyncio.to_thread(self.engine.download_config, income.payload)
                     await self._send_ack()
                 case _:
                     self.logger.warning("Unknown command.. ignoring")
@@ -136,6 +136,6 @@ class Handler:
         self.state = self.HandlerState.IDLE
 
         try:
-            await asyncio.gather(self._main_loop())
+            await asyncio.gather(self._main_loop(),)
         finally:
             gpio.cleanup()
