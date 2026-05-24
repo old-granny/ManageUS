@@ -54,15 +54,15 @@ export function Headbar({
                     value={sceneName}
                     onChange={e => onSceneNameChange(e.target.value)}
                     placeholder="Nom de la scène..."
-                    className="bg-zinc-900/80 border border-zinc-700/50 rounded-xl text-zinc-100 h-7 w-54 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all font-medium text-xs placeholder-zinc-600 shadow-[inset_0_1px_2px_rgba(0,0,0,0.4)]"
+                    className="bg-zinc-900/80 border border-zinc-700/50 rounded-xl text-zinc-100 h-9 w-72 px-3 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all font-medium text-sm placeholder-zinc-600 shadow-[inset_0_1px_2px_rgba(0,0,0,0.4)]"
                 />
             </div>
             
             <button
                 onClick={onToggleGrid}
-                className={`px-4 py-2 rounded text-xs font-medium border transition-colors cursor-pointer ${
+                className={`w-[6.5rem] py-2 rounded text-sm font-medium border transition-colors cursor-pointer ${
                     showGrid
-                        ? 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700'
+                        ? 'bg-blue-600 text-white border-blue-600 hover:bg-blue-500'
                         : 'bg-transparent text-zinc-400 border-zinc-700 hover:border-zinc-500 hover:text-zinc-200'
                 }`}
             >
@@ -71,48 +71,52 @@ export function Headbar({
 
             <button
                 onClick={onToggleSnapToGrid}
-                className={`px-4 py-2 rounded text-xs font-medium border transition-colors cursor-pointer ${
+                className={`w-[6.5rem] py-2 rounded text-sm font-medium border transition-colors cursor-pointer ${
                     snapToGrid
-                        ? 'bg-purple-600 text-white border-purple-600 hover:bg-purple-700'
+                        ? 'bg-violet-600 text-white border-violet-600 hover:bg-violet-500'
                         : 'bg-transparent text-zinc-400 border-zinc-700 hover:border-zinc-500 hover:text-zinc-200'
                 }`}
             >
-                Anchors 
+                Snap
             </button>
+
+            <div className="w-px h-6 bg-zinc-700 shrink-0" />
 
             <button
                 onClick={onResetCamera}
-                className="bg-white hover:bg-gray-100 text-gray-800 font-semibold py-2 px-4 border border-gray-400 rounded shadow"
+                className="w-[6.5rem] py-2 rounded text-sm font-medium border transition-colors cursor-pointer bg-transparent text-zinc-400 border-zinc-700 hover:border-zinc-500 hover:text-zinc-200"
             >
                 Recenter
             </button>
 
             <button
                 onClick={onImport}
-                className="bg-white hover:bg-gray-100 text-gray-800 font-semibold py-2 px-4 border border-gray-400 rounded shadow"
-                >
-                Import scene
+                className="w-[6.5rem] py-2 rounded text-sm font-medium border transition-colors cursor-pointer bg-transparent text-zinc-400 border-zinc-700 hover:border-zinc-500 hover:text-zinc-200"
+            >
+                Import
             </button>
 
             <button
                 onClick={onExport}
-                className="bg-white hover:bg-gray-100 text-gray-800 font-semibold py-2 px-4 border border-gray-400 rounded shadow"
-                >
-                Export scene
+                className="w-[6.5rem] py-2 rounded text-sm font-medium border transition-colors cursor-pointer bg-transparent text-teal-400 border-teal-800 hover:bg-teal-950 hover:border-teal-600"
+            >
+                Export
             </button>
 
             <button
                 onClick={onReset}
-                className="bg-white hover:bg-gray-100 text-gray-800 font-semibold py-2 px-4 border border-gray-400 rounded shadow"
+                className="w-[6.5rem] py-2 rounded text-sm font-medium border transition-colors cursor-pointer bg-transparent text-red-400 border-red-800 hover:bg-red-950 hover:border-red-600"
             >
-                Reset board
+                Reset
             </button>
+
+            <div className="w-px h-6 bg-zinc-700 shrink-0" />
                 
             <button
                 onClick={onGoToTimeline}
-                className="bg-white hover:bg-gray-100 text-gray-800 font-semibold py-2 px-4 border border-gray-400 rounded shadow"
+                className="w-[6.5rem] py-2 rounded text-sm font-medium border transition-colors cursor-pointer bg-emerald-600 text-white border-emerald-600 hover:bg-emerald-500"
             >
-                Create timeline
+                Timeline
             </button>
 
             <div className="hidden xl:flex absolute right-6 top-1/2 -translate-y-1/2 items-center gap-5 whitespace-nowrap">
