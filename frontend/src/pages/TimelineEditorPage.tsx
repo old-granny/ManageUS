@@ -121,36 +121,11 @@ export function TimelineEditorPage() {
     alert(`✅ Timeline "${timelineName}" sauvegardée !`);
   }
 
-  async function handleSendToPi() {
-    if (!scene) { alert("Aucune scène chargée."); return; }
-
-    const timeline = buildTimeline();
-    try {
-      const { default: JSZip } = await import('jszip');
-      const zip = new JSZip();
-      zip.file('timeline.json', JSON.stringify({ scene, timeline }, null, 2));
-      for (const step of timeline.steps) {
-        if (step.type === 'action' && step.attachedFileName) {
-          const f = fileStore.current.get(step.id);
-          if (f) zip.file(step.attachedFileName, f);
-        }
-      }
-      const blob = await zip.generateAsync({ type: 'blob' });
-      const form = new FormData();
-      form.append('file', blob, 'timeline.zip');
-      const res = await fetch('http://localhost:3000/timeline/send', { method: 'POST', body: form });
-      if (res.ok) alert('Timeline envoyée au Raspberry Pi !');
-      else alert(`Erreur ${res.status} du serveur.`);
-    } catch (err) {
-      console.error(err);
-      alert("Impossible d'envoyer la timeline.\nVérifie que le serveur NestJS est démarré.");
-    }
-  }
 
   return (
     <div className="timeline-editor">
 
-      <HeadbarTimeLine onSave={handleSave}/>
+      <HeadbarTimeLine onSave={handleSave} onGoToSceneEditor={() => dispatch({ type: 'SET_PAGE', page: 'scene-editor' })}/>
 
       <div className="timeline-middle">
         <ObjectCreatorTimeLine
@@ -178,7 +153,7 @@ export function TimelineEditorPage() {
         onRemoveStep={removeStep}
         onUpdateStep={updateStep}
       />
-
+      
       <input ref={fileInputRef} type="file" style={{ display: 'none' }} onChange={handleFileChosen} />
     </div>
   );
