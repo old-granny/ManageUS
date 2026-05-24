@@ -64,10 +64,23 @@ export function SceneCreatorTimeLine({
     });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  function clampPan(panX: number, panY: number, scale: number): { x: number; y: number } {
+    if (!sectionRef.current) return { x: panX, y: panY };
+    const { width: vw, height: vh } = sectionRef.current.getBoundingClientRect();
+    const sw = configData.VIRTUAL_STAGE_WIDTH  * scale;
+    const sh = configData.VIRTUAL_STAGE_HEIGHT * scale;
+    return {
+      x: Math.min(0, Math.max(vw - sw, panX)),
+      y: Math.min(0, Math.max(vh - sh, panY)),
+    };
+  }
+
   function handleWheel(e: React.WheelEvent<HTMLElement>) {
     e.preventDefault();
     const factor = 0.08;
-    setViewScale(prev => Math.min(4, Math.max(0.05, prev + (e.deltaY < 0 ? factor : -factor))));
+    const newScale = Math.min(4, Math.max(0.05, viewScale + (e.deltaY < 0 ? factor : -factor)));
+    setViewScale(newScale);
+    setViewPan(prev => clampPan(prev.x, prev.y, newScale));
   }
 
   function handleMouseDown(e: React.MouseEvent<HTMLElement>) {
@@ -85,11 +98,10 @@ export function SceneCreatorTimeLine({
     const dy = Math.abs(e.clientY - viewPanStartPos.current.y);
     if (!didPanView.current && (dx > 3 || dy > 3)) didPanView.current = true;
     if (didPanView.current) {
-      setViewPan({
-        x: e.clientX - startViewPanOffset.current.x,
-        y: e.clientY - startViewPanOffset.current.y,
-      });
-    }
+        const rawX = e.clientX - startViewPanOffset.current.x;
+        const rawY = e.clientY - startViewPanOffset.current.y;
+        setViewPan(clampPan(rawX, rawY, viewScale));
+      }
   }
 
   function handleMouseUp() {
