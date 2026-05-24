@@ -6,7 +6,8 @@
 // =============================================================================
 
 /** The four kinds of physical equipment that can be placed on a stage */
-export type ComponentKind = 'light' | 'speaker' | 'projector' | 'curtain';
+export type ComponentKind = 'light' | 'speaker' | 'projector' | 'curtain' | 'section_scene' | 'corde' | 'flame' ;
+
 
 /** Human-readable French labels for each component kind (used in the UI) */
 export const KIND_LABELS: Record<ComponentKind, string> = {
@@ -14,7 +15,23 @@ export const KIND_LABELS: Record<ComponentKind, string> = {
   speaker:   'Haut-parleur',
   projector: 'Projecteur',
   curtain:   'Rideau',
+  section_scene: 'Section de Scène',
+  flame: 'Flamme',
+  corde: 'Corde', 
 };
+
+
+export const COMPONENT_CONFIG: Record<ComponentKind, { isResizable: boolean }> = {
+  section_scene:  { isResizable: true },
+  light:          { isResizable: false },
+  speaker:        { isResizable: false },
+  projector:      { isResizable: false },
+  curtain:        { isResizable: true },
+  flame:          { isResizable: false },
+  corde:          { isResizable: false },
+};
+
+
 
 /**
  * Available actions for each component kind.
@@ -22,10 +39,13 @@ export const KIND_LABELS: Record<ComponentKind, string> = {
  * executed by the Raspberry Pi display script.
  */
 export const KIND_ACTIONS: Record<ComponentKind, string[]> = {
-  light:     ['ON', 'OFF'],
-  speaker:   ['PLAY', 'STOP'],
-  projector: ['SHOW', 'OFF'],   // SHOW requires an attached image
-  curtain:   ['OPEN', 'CLOSE'],
+  light:             ['ON', 'OFF'],
+  speaker:           ['PLAY', 'STOP'], // Play also requires an attached sound
+  projector:         ['SHOW', 'OFF'],   // SHOW requires an attached image
+  curtain:           ['OPEN', 'CLOSE'],
+  flame:             ['ON', 'OFF'],
+  corde:             ['PULL', 'LETGO'],
+  section_scene:     []
 };
 
 /**
@@ -38,6 +58,7 @@ export const ACTIONS_REQUIRING_FILE: Record<string, { accept: string; folder: 'i
   PLAY: { accept: 'audio/*', folder: 'sounds' },
 };
 
+
 // ── Scene ─────────────────────────────────────────────────────────────────────
 
 /**
@@ -46,11 +67,24 @@ export const ACTIONS_REQUIRING_FILE: Record<string, { accept: string; folder: 'i
  * so the layout works at any screen size.
  */
 export interface PlacedComponent {
-  id:   string;         // unique identifier, e.g. "light-1716000000000-ab3f"
-  kind: ComponentKind;
-  name: string;         // user-given label, e.g. "Lumière gauche"
-  x:    number;         // horizontal position as % of stage width  (0–100)
-  y:    number;         // vertical   position as % of stage height (0–100)
+  id:      string;         // unique identifier, e.g. "light-1716000000000-ab3f"
+  kind:    ComponentKind;
+  name:    string;         // user-given label, e.g. "Lumière gauche"
+  x:       number;         // left edge position in virtual px on the infinite canvas
+  y:       number;         // top  edge position in virtual px on the infinite canvas
+  width?:  number;         // component box width  in virtual px (default 80)
+  height?: number;         // component box height in virtual px (default 80)
+}
+
+
+export interface ExtensiableComponent {
+  id:      string;         // unique identifier, e.g. "light-1716000000000-ab3f"
+  kind:    ComponentKind;
+  name:    string;         // user-given label, e.g. "Lumière gauche"
+  x:       number;         // left edge position in virtual px on the infinite canvas
+  y:       number;         // top  edge position in virtual px on the infinite canvas
+  width?:  number;         // component box width  in virtual px (default 80)
+  height?: number;         // component box height in virtual px (default 80)
 }
 
 /** A scene is a named arrangement of components positioned on the stage */
@@ -59,6 +93,19 @@ export interface Scene {
   name:       string;
   components: PlacedComponent[];
 }
+
+
+
+export const COMPONENT_TEXTURES: Record<ComponentKind, string> = {
+  section_scene: 'bg-texture-scene bg-blue-500/5',
+  flame:         'bg-texture-flame bg-orange-500/5',
+  light:         'bg-transparent',
+  speaker:       'bg-transparent',
+  projector:     'bg-transparent',
+  curtain:       'bg-transparent',
+  corde:         'bg-transparent'
+};
+
 
 // ── Timeline ──────────────────────────────────────────────────────────────────
 
@@ -88,3 +135,5 @@ export interface Timeline {
   sceneId: string;  // links back to the Scene this timeline operates on
   steps:   TimelineStep[];
 }
+
+

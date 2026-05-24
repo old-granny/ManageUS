@@ -155,21 +155,53 @@
 
 /* A component that has been dropped onto the canvas */
 .placed-comp {
-  position:       absolute;
-  transform:      translate(-50%, -50%);  /* centre on the drop point */
-  display:        flex;
-  flex-direction: column;
-  align-items:    center;
-  gap:            2px;
+  position:      absolute;
+  box-sizing:    border-box;
+  border:        1.5px solid transparent;
+  border-radius: 4px;
+  transition:    border-color 0.12s;
+  overflow:      visible;   /* handles spill outside the box */
+}
+.placed-comp:hover {
+  border-color: rgba(255,255,255,0.35);
+}
+/* SVG inside a placed component fills the full box */
+.placed-comp > svg {
+  display: block;
+  width:   100%;
+  height:  100%;
 }
 
+/* ── Resize handles (8-way, appear on hover) ────────────────────────────── */
+.resize-handle {
+  position:      absolute;
+  width:         11px;
+  height:        11px;
+  background:    #fff;
+  border:        1.5px solid #555;
+  border-radius: 2px;
+  opacity:       0;
+  transition:    opacity 0.12s, background 0.1s;
+  z-index:       20;
+  box-sizing:    border-box;
+}
+.placed-comp:hover .resize-handle { opacity: 1; }
+.resize-handle:hover               { background: #FFD700; border-color: #333; }
+
 .comp-name {
+  position:       absolute;
+  bottom:         0;
+  left:           0;
+  right:          0;
   font-size:      10px;
-  background:     rgba(0,0,0,.65);
+  background:     rgba(0,0,0,0.65);
   color:          #fff;
-  padding:        1px 5px;
-  border-radius:  3px;
+  padding:        2px 5px;
+  border-radius:  0 0 3px 3px;
+  text-align:     center;
   white-space:    nowrap;
+  overflow:       hidden;
+  text-overflow:  ellipsis;
   pointer-events: none;
 }
 
@@ -448,3 +480,27 @@
 .btn-outline   { background: transparent; border: 2px solid #888; color: #555; }
 .btn-ghost     { background: transparent; color: rgba(255,255,255,.6); }
 .btn-sm        { padding: 5px 12px; font-size: 12px; }
+
+
+
+
+.bg-texture-scene {
+  background-color: #1a1a1e;
+  background-size: 20px 20px;
+  background-image: 
+    linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  border: 2px dashed #3b82f6;
+}
+
+/* 🔊 Exemple de texture pour un Haut-Parleur (si tu voulais lui mettre un fond texturé un jour) */
+.bg-texture-speaker {
+  background: radial-gradient(circle, #333 20%, transparent 20%), #222;
+  background-size: 4px 4px;
+}
+
+/* 🔥 Texture pour les effets ou zones de Flammes (Dégradé d'alerte chaud) */
+.bg-texture-flame {
+  background: repeating-linear-gradient(45deg, #2a1405, #2a1405 10px, #3b1d04 10px, #3b1d04 20px);
+  border: 2px dashed #f97316;
+}

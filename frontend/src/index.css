@@ -2,6 +2,8 @@
    index.css - global reset and base styles
    App-specific styles live in App.css.
    ========================================================================== */
+@import "tailwindcss";
+
 
 *, *::before, *::after {
   box-sizing: border-box;
