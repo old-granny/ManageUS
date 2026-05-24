@@ -4,6 +4,14 @@
     "DEFAULT_COMP_W": 80,
     "DEFAULT_COMP_H": 80,
     "MIN_COMP_SIZE": 40,
+
     "MAX_LED": 4,
+    "MAX_FLAMME": 3,
+    "MAX_ROPE": 3,
+
+    "MAX_CURTAIN": 1,
+    "MAX_PROJECTOR": 1,
+    "MAX_SPEAKER":1,
+
     "HOSTNAME" : "http://locahost:3000"
 }

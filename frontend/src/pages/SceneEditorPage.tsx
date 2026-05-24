@@ -111,6 +111,10 @@ export function SceneEditorPage() {
   }
 
   const MAX_LEDS = configData.MAX_LED;
+  const MAX_FLAMME = configData.MAX_FLAMME;
+  const MAX_CURTAIN = configData.MAX_CURTAIN;
+  const MAX_PROJECTOR = configData.MAX_PROJECTOR;
+  const MAX_ROPE = configData.MAX_ROPE;
 
   function handleStageDrop(e: React.DragEvent<HTMLDivElement>) {
     e.preventDefault();
@@ -118,13 +122,31 @@ export function SceneEditorPage() {
     if (!kind || !stageRef.current) return;
 
     if (kind === 'led' && components.filter(c => c.kind === 'led').length >= MAX_LEDS) {
-      alert(`Max ${MAX_LEDS} LEDs for one Manager`);
       draggingKind.current = null;
       return;
     }
 
-    if (kind === 'flame' && components.filter(c => c.kind === 'flame').length >= 3) {
-      alert('Max 3 flammes sur la scène.');
+    if (kind === 'flame' && components.filter(c => c.kind === 'flame').length >= MAX_FLAMME) {
+      draggingKind.current = null;
+      return;
+    }
+
+    if (kind === 'curtain' && components.filter(c => c.kind === 'curtain').length >= MAX_CURTAIN) {
+      draggingKind.current = null;
+      return;
+    }
+
+    if (kind === 'projector' && components.filter(c => c.kind === 'projector').length >= MAX_PROJECTOR) {
+      draggingKind.current = null;
+      return;
+    }
+
+    if (kind === 'corde' && components.filter(c => c.kind === 'corde').length >= MAX_ROPE) {
+      draggingKind.current = null;
+      return;
+    }
+
+    if (kind === 'speaker' && components.filter(c => c.kind === 'speaker').length >= MAX_ROPE) {
       draggingKind.current = null;
       return;
     }
