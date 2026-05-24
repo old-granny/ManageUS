@@ -126,10 +126,16 @@ export type TimelineStep =
       trackId?: string;
       componentId: string;
       action: string;
-      /** Path of the attached file inside the ZIP (e.g. "images/comp-123.jpg"). Undefined for actions that need no file. */
       attachedFileName?: string;
       duration?: number;
-      /** Absolute start position on the timeline in seconds. Defaults to 0. */
+      startOffset?: number;
+    }
+  | {
+      id: string;
+      type: 'group';
+      trackId?: string;
+      actions: { componentId: string; action: string; attachedFileName?: string }[];
+      duration?: number;
       startOffset?: number;
     }
   | { id: string; type: 'wait'; trackId?: string; waitMs: number; duration?: number; startOffset?: number; };

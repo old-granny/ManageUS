@@ -333,6 +333,10 @@ export function TrackCreatorTimeLine({
 
   function stepLabel(step: TimelineStep): string {
     if (step.type === 'wait') return `⏱ ${step.waitMs / 1000}s`;
+    
+    // NOUVEAU: Si c'est un bloc groupé, on affiche combien d'actions il contient !
+    if (step.type === 'group') return `📦 Groupe (${step.actions.length} éléments)`;
+    
     const comp = sceneComponents.find(c => c.id === step.componentId);
     return `${comp ? comp.name : step.componentId} → ${step.action}`;
   }

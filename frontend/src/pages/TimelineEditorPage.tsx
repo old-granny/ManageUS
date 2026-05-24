@@ -20,7 +20,7 @@ export function TimelineEditorPage() {
 
   const [timelineName] = useState<string>(existingTimeline?.name ?? 'Ma timeline');
   const [steps, setSteps]               = useState<TimelineStep[]>(existingTimeline?.steps ?? []);
-  const [selectedComp, setSelectedComp] = useState<PlacedComponent | null>(null);
+  const [selectedComps, setSelectedComps] = useState<PlacedComponent[]>([]);
 
   const [pendingAction, setPendingAction] = useState<{ comp: PlacedComponent; action: string } | null>(null);
   const fileStore    = useRef<Map<string, File>>(new Map());
@@ -36,17 +36,85 @@ export function TimelineEditorPage() {
   }
 
   function removeTrack(id: string) {
+    const index = tracks.findIndex(t => t.id === id);
     const remaining = tracks.filter(t => t.id !== id);
+
     if (remaining.length > 0) {
-      const fallbackId = remaining[0].id;
-      setSteps(prev => prev.map(s => s.trackId === id ? { ...s, trackId: fallbackId } as TimelineStep : s));
+      // Déterminer la piste de repli : 
+      // Si on supprime l'index 0, on prend le nouveau index 0.
+      // Si on supprime une piste > 0, on prend la piste précédente (index - 1).
+      const newIndex = index > 0 ? index - 1 : 0;
+      const fallbackId = remaining[newIndex].id;
+
+      // On déplace les étapes vers la piste de repli
+      setSteps(prev => prev.map(s => 
+        s.trackId === id ? ({ ...s, trackId: fallbackId } as TimelineStep) : s
+      ));
+      
+      // Mise à jour de la sélection
+      if (selectedTrackId === id) {
+        setSelectedTrackId(fallbackId);
+      }
     }
+
     setTracks(remaining);
-    if (selectedTrackId === id && remaining.length > 0) setSelectedTrackId(remaining[0].id);
   }
 
   function moveStepToTrack(stepId: string, toTrackId: string) {
     setSteps(prev => prev.map(s => s.id === stepId ? { ...s, trackId: toTrackId } as TimelineStep : s));
+  }
+
+  // NOUVEAU: Permet d'ajouter/retirer un objet de la sélection multiple
+  function toggleCompSelection(comp: PlacedComponent) {
+    setSelectedComps(prev => {
+      if (prev.some(c => c.id === comp.id)) return prev.filter(c => c.id !== comp.id);
+      return [...prev, comp];
+    });
+  }
+
+  function deselectComp(id: string) {
+    setSelectedComps(prev => prev.filter(c => c.id !== id));
+  }
+
+  // NOUVEAU: Crée un bloc standard (si 1 objet) ou un bloc groupé (si plusieurs)
+  function addBlockStep(actions: { componentId: string; action: string }[]) {
+    if (actions.length === 0) return;
+
+    if (actions.length === 1) {
+      const actionName = actions[0].action;
+      const fileReq = ACTIONS_REQUIRING_FILE[actionName];
+      if (fileReq) {
+        const comp = selectedComps.find(c => c.id === actions[0].componentId)!;
+        setPendingAction({ comp, action: actionName });
+        setSelectedComps([]);
+        if (fileInputRef.current) {
+          fileInputRef.current.accept = fileReq.accept;
+          fileInputRef.current.click();
+        }
+        return;
+      }
+
+      const step: TimelineStep = {
+        id: `step-${Date.now()}`,
+        type: 'action',
+        trackId: selectedTrackId,
+        componentId: actions[0].componentId,
+        action: actionName,
+      };
+      setSteps(prev => [...prev, step]);
+      setSelectedComps([]);
+      return;
+    }
+
+    // Création du bloc groupé
+    const step: TimelineStep = {
+      id: `step-${Date.now()}`,
+      type: 'group',
+      trackId: selectedTrackId,
+      actions: actions,
+    };
+    setSteps(prev => [...prev, step]);
+    setSelectedComps([]);
   }
 
   function bumpToNewTrack(stepId: string) {
@@ -60,32 +128,6 @@ export function TimelineEditorPage() {
     return steps
       .filter(s => (s.trackId ?? 'track-1') === trackId)
       .reduce((max, s) => Math.max(max, (s.startOffset ?? 0) + (s.duration ?? 1)), 0);
-  }
-
-  function addActionStep(action: string) {
-    if (!selectedComp) return;
-
-    const fileReq = ACTIONS_REQUIRING_FILE[action];
-    if (fileReq) {
-      setPendingAction({ comp: selectedComp, action });
-      setSelectedComp(null);
-      if (fileInputRef.current) {
-        fileInputRef.current.accept = fileReq.accept;
-        fileInputRef.current.click();
-      }
-      return;
-    }
-
-    const step: TimelineStep = {
-      id: `step-${Date.now()}`,
-      type: 'action',
-      trackId: selectedTrackId,
-      componentId: selectedComp.id,
-      action,
-      startOffset: nextOffset(selectedTrackId),
-    };
-    setSteps(prev => [...prev, step]);
-    setSelectedComp(null);
   }
 
   function updateStep(id: string, updates: Record<string, any>) {
@@ -151,15 +193,15 @@ export function TimelineEditorPage() {
 
       <div className="timeline-middle">
         <ObjectCreatorTimeLine
-          selectedComp={selectedComp}
+          selectedComps={selectedComps}
           activeTrackName={tracks.find(t => t.id === selectedTrackId)?.name ?? '—'}
-          onAddAction={addActionStep}
-          onCancel={() => setSelectedComp(null)}
+          onAddBlock={addBlockStep}
+          onDeselectComp={deselectComp}
         />
         <SceneCreatorTimeLine
           scene={scene}
-          selectedComp={selectedComp}
-          onSelectComp={setSelectedComp}
+          selectedComps={selectedComps}
+          onToggleComp={toggleCompSelection}
         />
       </div>
 
