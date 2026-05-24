@@ -6,9 +6,9 @@ import {
   type TimelineStep,
   type Timeline,
 } from '../types';
-import { ObjectCreatorTimeLine } from '../components/ObjectCreatorTimeLine';
-import { SceneCreatorTimeLine }  from '../components/SceneCreatorTimeLine';
-import { TrackCreatorTimeLine }  from '../components/TrackCreatorTimeLine';
+import { ObjectCreatorTimeLine } from '../components/Timeline/ObjectCreatorTimeLine';
+import { SceneCreatorTimeLine }  from '../components/Timeline/SceneCreatorTimeLine';
+import { TrackCreatorTimeLine }  from '../components/Timeline/TrackCreatorTimeLine';
 
 export function TimelineEditorPage() {
   const { state, dispatch } = useAppStore();

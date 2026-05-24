@@ -1,4 +1,4 @@
-import { KIND_ACTIONS, type PlacedComponent } from '../types';
+import { KIND_ACTIONS, type PlacedComponent } from '../../types';
 
 interface ObjectCreatorTimeLineProps {
   selectedComp:    PlacedComponent | null;
