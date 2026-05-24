@@ -7,14 +7,14 @@ import NonResizableComponents      from '../NonRezisableObjects.tsx';
 
 interface SceneCreatorTimeLineProps {
   scene:          Scene | undefined;
-  selectedComp:   PlacedComponent | null;
-  onSelectComp:   (comp: PlacedComponent | null) => void;
+  selectedComps:  PlacedComponent[];
+  onToggleComp:   (comp: PlacedComponent) => void;
 }
 
 export function SceneCreatorTimeLine({
   scene,
-  selectedComp,
-  onSelectComp,
+  selectedComps,
+  onToggleComp,
 }: SceneCreatorTimeLineProps) {
   const [viewScale, setViewScale] = useState<number>(0.15);
   const [viewPan,   setViewPan]   = useState<{ x: number; y: number }>({ x: 0, y: 0 });
@@ -145,7 +145,7 @@ export function SceneCreatorTimeLine({
           const compW       = comp.width  ?? 80;
           const compH       = comp.height ?? 80;
           const isResizable = COMPONENT_CONFIG[comp.kind].isResizable;
-          const isSelected  = selectedComp?.id === comp.id;
+          const isSelected  = selectedComps.some(c => c.id === comp.id);
 
           return (
             <div
@@ -165,7 +165,7 @@ export function SceneCreatorTimeLine({
               }}
               onClick={() => {
                 if (didPanView.current) return;
-                onSelectComp(selectedComp?.id === comp.id ? null : comp);
+                onToggleComp(comp);
               }}
             >
               {(() => {
