@@ -1,11 +1,7 @@
 /* ============================================================================
    App.css - Graphicus Stage Manager
-   All component and layout styles live here.
-   Organized in sections: Reset, Variables, Scene Editor, Timeline Editor,
-   Shared Buttons.
    ============================================================================ */
 
-/* -- Override the Vite template's constrained #root ------------------------ */
 #root {
   width:      100%;
   max-width:  100%;
@@ -15,436 +11,410 @@
   border:     none;
 }
 
-/* -- Design tokens ----------------------------------------------------------- */
 :root {
-  --palette-blue:  #1a1aee;   /* sidebar background */
-  --wood-mid:      #c8a46e;   /* stage canvas base colour */
-  --wood-dark:     #7a5030;   /* stage border */
-  --timeline-bg:   #d0d0d0;
+  --navy-dark:     #0b1121;   /* Top bar & Bottom timeline bg */
+  --navy-mid:      #1a2a5e;   /* Sidebar and Stage outer bg */
+  --navy-card:     #0f172a;   /* Inner card bg */
+  --stage-grey:    #d1d5db;   /* Inner stage color */
+  --track-grey:    #374151;   /* Timeline track color */
+  --text-light:    #f8fafc;
   --btn-green:     #22c55e;
   --btn-red:       #dc2626;
-  --btn-dark:      #374151;
-  --shadow-sm:     0 1px 4px rgba(0,0,0,.25);
   --shadow-md:     0 4px 14px rgba(0,0,0,.35);
   font-family:     'Segoe UI', system-ui, sans-serif;
 }
 
 /* ============================================================================
-   SCENE EDITOR
-   Grid: 48px top bar | 200px sidebar + remaining stage canvas
+   TIMELINE EDITOR LAYOUT (PROTOTYPE MATCH)
    ============================================================================ */
 
-.scene-editor {
-  display: grid;
-  grid-template-columns: 200px 1fr;
-  grid-template-rows:    48px  1fr;
+.timeline-editor {
+  display: flex;
+  flex-direction: column;
   height: 100dvh;
   overflow: hidden;
+  background: var(--navy-dark);
 }
 
 /* -- Top bar ---------------------------------------------------------------- */
 .scene-topbar {
-  grid-column:   1 / -1;   /* spans both columns */
-  background:    #1e1e2e;
-  display:       flex;
-  align-items:   center;
-  gap:           12px;
-  padding:       0 16px;
-  border-bottom: 2px solid #333;
+  background: var(--navy-dark);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 16px;
+  height: 48px;
+  border-bottom: 2px solid #000;
 }
 
-.topbar-logo {
-  font-size:    18px;
-  font-weight:  700;
-  color:        #fff;
-  margin-right: 8px;
+.topbar-links {
+  display: flex;
+  gap: 20px;
 }
 
-.scene-topbar label {
-  color:       rgba(255,255,255,.7);
-  font-size:   13px;
-  white-space: nowrap;
+.topbar-link {
+  background: transparent;
+  border: none;
+  color: var(--text-light);
+  font-size: 14px;
+  cursor: pointer;
+  transition: opacity 0.2s;
 }
 
-.scene-topbar input {
-  background:    #2d2d3f;
-  border:        1px solid #4b5563;
-  border-radius: 6px;
-  color:         #fff;
-  padding:       5px 10px;
-  font-size:     14px;
-  width:         260px;
-  outline:       none;
-  transition:    border-color .15s;
+.topbar-link:hover {
+  opacity: 0.7;
 }
-.scene-topbar input:focus { border-color: var(--btn-green); }
 
-/* -- Palette sidebar ---------------------------------------------------------- */
-.palette {
-  background:     var(--palette-blue);
-  display:        flex;
+.topbar-avatar {
+  width: 30px;
+  height: 30px;
+  background: #ccc;
+  border-radius: 50%;
+}
+
+/* -- Middle Section (Sidebar + Stage) --------------------------------------- */
+.timeline-middle {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* Left Sidebar */
+.component-creator-panel {
+  width: 280px;
+  background: var(--navy-mid);
+  padding: 20px;
+  border-right: 4px solid #000;
+}
+
+.creator-card {
+  background: var(--navy-card);
+  border-radius: 8px;
+  padding: 20px 16px;
+  height: 200px;
+  color: var(--text-light);
+  text-align: center;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
+}
+
+.creator-card h3 {
+  margin: 0 0 40px 0;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.creator-card .subtitle {
+  font-size: 12px;
+  color: #94a3b8;
+  line-height: 1.5;
+}
+
+.action-picker-inline {
+  display: flex;
   flex-direction: column;
-  align-items:    center;
-  padding:        16px 8px;
-  gap:            10px;
-  overflow-y:     auto;
+  gap: 10px;
+  align-items: center;
 }
 
-.palette-title {
-  font-size:      11px;
-  font-weight:    700;
-  text-transform: uppercase;
-  letter-spacing: 1.2px;
-  color:          rgba(255,255,255,.55);
-}
-
-.palette-item {
-  display:        flex;
-  flex-direction: column;
-  align-items:    center;
-  gap:            4px;
-  width:          100%;
-  padding:        8px 6px;
-  border-radius:  8px;
-  cursor:         grab;
-  transition:     background .15s;
-  user-select:    none;
-}
-.palette-item:hover  { background: rgba(255,255,255,.18); }
-.palette-item:active { cursor: grabbing; }
-.palette-item span   { font-size: 11px; color: rgba(255,255,255,.8); }
-
-.palette-spacer { flex: 1; min-height: 8px; }
-
-/* -- Stage canvas (wood-floor drop target) ------------------------------------ */
-.stage-canvas {
-  position:   relative;
-  overflow:   hidden;
-  /* CSS wood-plank texture: vertical lines + subtle grain */
-  background-color:  var(--wood-mid);
-  background-image:
-    repeating-linear-gradient(
-      90deg,
-      rgba(0,0,0,.07)   0px,
-      transparent       1px,
-      transparent       30px,
-      rgba(0,0,0,.07)   31px
-    ),
-    repeating-linear-gradient(
-      180deg,
-      rgba(255,255,255,.04) 0px,
-      transparent           5px,
-      transparent           60px,
-      rgba(255,255,255,.04) 61px
-    );
-  border: 3px solid var(--wood-dark);
-}
-
-.stage-hint {
-  position:        absolute;
-  inset:           0;
-  display:         flex;
-  align-items:     center;
-  justify-content: center;
-  color:           rgba(0,0,0,.25);
-  font-size:       20px;
-  font-style:      italic;
-  pointer-events:  none;
-  user-select:     none;
-}
-
-/* A component that has been dropped onto the canvas */
-.placed-comp {
-  position:       absolute;
-  transform:      translate(-50%, -50%);  /* centre on the drop point */
-  display:        flex;
-  flex-direction: column;
-  align-items:    center;
-  gap:            2px;
-}
-
-.comp-name {
-  font-size:      10px;
-  background:     rgba(0,0,0,.65);
-  color:          #fff;
-  padding:        1px 5px;
-  border-radius:  3px;
-  white-space:    nowrap;
-  pointer-events: none;
-}
-
-/* � remove button � hidden via CSS until the user hovers the component */
-.comp-remove {
-  position:        absolute;
-  top:             -8px;
-  right:           -8px;
-  background:      var(--btn-red);
-  color:           #fff;
-  border:          none;
-  border-radius:   50%;
-  width:           18px;
-  height:          18px;
-  font-size:       13px;
-  line-height:     1;
-  cursor:          pointer;
-  display:         none;
-  align-items:     center;
+.action-btns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
   justify-content: center;
 }
-.placed-comp:hover .comp-remove { display: flex; }
 
-/* ============================================================================
-   TIMELINE EDITOR
-   Flex column: stage view (grows to fill space) + timeline panel (fixed)
-   ============================================================================ */
-
-.timeline-editor {
-  display:        flex;
-  flex-direction: column;
-  height:         100dvh;
-  overflow:       hidden;
-  background:     #1a1a2e;
-}
-
-/* -- Stage view (top section) ------------------------------------------------ */
+/* Stage View */
 .stage-view {
-  position:        relative;
-  flex:            1;
-  overflow:        hidden;
-  background:      #e8e8e8;
-  display:         flex;
-  align-items:     center;
+  flex: 1;
+  background: var(--navy-mid);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.stage-frame {
+  position: relative;
+  width: min(75%, 900px);
+  aspect-ratio: 16 / 9;
+  background: var(--navy-mid);
+  display: flex;
+  align-items: center;
   justify-content: center;
 }
 
-.modify-scene-btn {
+/* Le plancher gris clair au centre */
+.stage-floor {
   position: absolute;
-  top:      12px;
-  left:     12px;
-  z-index:  5;
+  width: 75%;
+  height: 100%;
+  background: var(--stage-grey);
+  box-shadow: 0 0 20px rgba(0,0,0,0.3);
+  overflow: hidden;
 }
 
-/* Stage frame � the bordered rectangle representing the stage */
-.stage-frame {
-  position:     relative;
-  width:        min(72%, 900px);
-  aspect-ratio: 16 / 9;
-}
-
-/* Decorative lights along each edge of the stage */
+/* Lumières (ronds gris) sur la bordure bleue marine */
 .border-lights {
   position: absolute;
-  display:  flex;
-  z-index:  2;
+  display: flex;
+  z-index: 2;
 }
-.border-lights.top    { top: -14px;    left: 18px;  right: 18px;   flex-direction: row;    justify-content: space-between; }
-.border-lights.bottom { bottom: -14px; left: 18px;  right: 18px;   flex-direction: row;    justify-content: space-between; }
-.border-lights.left   { left: -14px;   top: 18px;   bottom: 18px;  flex-direction: column; justify-content: space-between; }
-.border-lights.right  { right: -14px;  top: 18px;   bottom: 18px;  flex-direction: column; justify-content: space-between; }
+.border-lights.top    { top: 20px; left: 15%; right: 15%; flex-direction: row; justify-content: space-around; }
+.border-lights.bottom { bottom: 20px; left: 20px; right: 20px; flex-direction: row; justify-content: space-around; }
+.border-lights.left   { left: 20px; top: 20%; bottom: 20%; flex-direction: column; justify-content: space-around; }
+.border-lights.right  { right: 20px; top: 20%; bottom: 20%; flex-direction: column; justify-content: space-around; }
 
 .b-light {
-  width:         13px;
-  height:        13px;
+  width: 35px;
+  height: 35px;
   border-radius: 50%;
-  background:    #bbb;
-  flex-shrink:   0;
-}
-
-/* Stage floor (gray rectangle, fills the frame) */
-.stage-floor {
-  position:   absolute;
-  inset:      0;
-  background: #ccc;
-  overflow:   hidden;
+  background: #cbd5e1;
+  flex-shrink: 0;
 }
 
 .stage-empty {
-  position:        absolute;
-  inset:           0;
-  display:         flex;
-  align-items:     center;
-  justify-content: center;
-  color:           #888;
-  font-size:       14px;
-  text-align:      center;
-  padding:         20px;
+  text-align: center;
+  margin-top: 20%;
+  color: #888;
 }
 
-/* Clickable component button on the stage */
 .stage-comp-btn {
-  position:       absolute;
-  transform:      translate(-50%, -50%);
-  background:     none;
-  border:         2px solid transparent;
-  border-radius:  8px;
-  cursor:         pointer;
-  display:        flex;
-  flex-direction: column;
-  align-items:    center;
-  gap:            2px;
-  padding:        4px;
-  transition:     filter .15s, border-color .15s, background .15s;
+  position: absolute;
+  transform: translate(-50%, -50%);
+  background: none;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  padding: 4px;
+  transition: filter .15s;
 }
-.stage-comp-btn span {
-  font-size:     9px;
-  background:    rgba(0,0,0,.6);
-  color:         #fff;
-  padding:       1px 4px;
-  border-radius: 3px;
-  white-space:   nowrap;
-}
-.stage-comp-btn:hover    { filter: brightness(1.3); }
-.stage-comp-btn.selected { border-color: var(--btn-green); background: rgba(34,197,94,.12); }
+.stage-comp-btn:hover { filter: brightness(1.2); }
+.stage-comp-btn.selected { border-color: var(--btn-green); background: rgba(34,197,94,.2); }
 
-/* Action picker popup � floats at the bottom of the stage view */
-.action-picker {
-  position:        absolute;
-  bottom:          14px;
-  left:            50%;
-  transform:       translateX(-50%);
-  background:      #1e2030;
-  color:           #fff;
-  border-radius:   12px;
-  padding:         10px 16px;
-  display:         flex;
-  align-items:     center;
-  gap:             8px;
-  box-shadow:      var(--shadow-md);
-  z-index:         10;
-  flex-wrap:       wrap;
-  justify-content: center;
-  font-size:       14px;
-}
-.picker-sep { color: rgba(255,255,255,.35); }
-
-/* -- Timeline panel (bottom section) ------------------------------------------ */
+/* -- Timeline Panel (Bottom) ------------------------------------------------ */
 .timeline-panel {
-  background:     var(--timeline-bg);
-  border-top:     3px solid #aaa;
-  display:        flex;
+  height: 240px;
+  background: #0b1121;
+  border-top: 2px solid #000;
+  display: flex;
   flex-direction: column;
-  max-height:     42vh;
-  min-height:     180px;
 }
 
-.timeline-header {
-  display:       flex;
-  align-items:   center;
-  gap:           8px;
-  padding:       8px 16px;
-  background:    #b8b8b8;
-  border-bottom: 1px solid #aaa;
-  flex-shrink:   0;
-}
-
-.tl-icon { font-size: 20px; color: #555; }
-
-.tl-name-input {
-  flex:          1;
-  background:    #fff;
-  border:        1px solid #ccc;
-  border-radius: 6px;
-  padding:       6px 10px;
-  font-size:     14px;
-  outline:       none;
-  transition:    border-color .15s;
-}
-.tl-name-input:focus { border-color: #555; }
-
-.wait-row {
-  display:     flex;
+.playback-controls {
+  display: flex;
+  justify-content: flex-start;
   align-items: center;
-  gap:         8px;
-  padding:     6px 16px;
-  background:  #c4c4c4;
-  font-size:   13px;
-  color:       #333;
+  gap: 15px;
+  padding: 8px 20px;
+  background: #070a13;
+  border-bottom: 1px solid #000;
+}
+
+.ctrl-btn {
+  background: transparent;
+  border: none;
+  color: #f8fafc;
+  font-size: 20px;
+  cursor: pointer;
+}
+.ctrl-btn:hover { opacity: 0.8; }
+
+.btn-add-track {
+  margin-left: auto;
+  background: transparent;
+  border: 1px solid #475569;
+  color: #94a3b8;
+  padding: 4px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.btn-add-track:hover {
+  background: #1e293b;
+  color: #fff;
+}
+
+/* Grille de la timeline */
+.timeline-grid-container {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* Colonne gauche (Fixe) */
+.timeline-labels-column {
+  width: 140px;
+  background: #090d16;
+  border-right: 2px solid #000;
+  display: flex;
+  flex-direction: column;
   flex-shrink: 0;
 }
-.wait-row input {
-  width:         60px;
-  border:        1px solid #aaa;
-  border-radius: 4px;
-  padding:       4px 6px;
-  font-size:     14px;
-  text-align:    center;
+
+.ruler-corner-cell {
+  height: 30px;
+  display: flex;
+  align-items: center;
+  padding-left: 12px;
+  font-size: 11px;
+  font-weight: bold;
+  color: #64748b;
+  text-transform: uppercase;
+  border-bottom: 1px solid #000;
 }
 
-.steps-list {
+.track-label-cell {
+  height: 46px;
+  display: flex;
+  align-items: center;
+  padding-left: 12px;
+  font-size: 13px;
+  color: #f8fafc;
+  border-bottom: 1px solid #334155;
+}
+
+/* Colonne droite (Scrollable) */
+.timeline-scrollable-area {
+  flex: 1;
+  overflow-x: auto;
   overflow-y: auto;
-  padding:    8px 16px;
-  display:    flex;
+  display: flex;
   flex-direction: column;
-  gap:        6px;
+  background: #111827;
 }
 
-.steps-empty {
-  color:       #777;
-  font-size:   13px;
-  padding:     16px 0;
-  font-style:  italic;
+/* Règle graduée (0.x secondes) */
+.timeline-ruler-row {
+  display: flex;
+  height: 30px;
+  background: #0f172a;
+  border-bottom: 1px solid #000;
+  width: max-content; /* S'assure que la règle suit le contenu */
 }
 
-.step-card {
-  background:    #fff;
-  border-radius: 6px;
-  padding:       8px 12px;
-  display:       flex;
-  align-items:   center;
-  gap:           10px;
-  box-shadow:    var(--shadow-sm);
+.ruler-tick-cell {
+  width: 70px; /* Espace entre chaque graduation de 0.2s */
+  flex-shrink: 0;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding-left: 4px;
 }
 
-.step-num {
-  background:      var(--palette-blue);
-  color:           #fff;
-  min-width:       24px;
-  height:          24px;
-  border-radius:   50%;
-  display:         flex;
-  align-items:     center;
-  justify-content: center;
-  font-size:       11px;
-  font-weight:     700;
-  flex-shrink:     0;
+.tick-text {
+  font-size: 10px;
+  color: #94a3b8;
+  margin-top: 2px;
 }
 
-.step-lbl { flex: 1; font-size: 13px; color: #333; }
+.tick-mark {
+  width: 1px;
+  height: 8px;
+  background: #475569;
+}
 
-.step-del {
-  background:  none;
-  border:      none;
-  color:       var(--btn-red);
-  font-size:   18px;
-  cursor:      pointer;
-  padding:     0 4px;
+/* Lignes des pistes */
+.timeline-track-data-row {
+  display: flex;
+  align-items: center;
+  height: 46px;
+  background: #1e293b;
+  border-bottom: 1px solid #334155;
+  padding: 0 10px;
+  gap: 8px;
+  min-width: max-content;
+}
+
+.track-empty-hint {
+  font-size: 11px;
+  color: #4b5563;
+  font-style: italic;
+}
+
+/* Blocs d'actions */
+.track-block {
+  background: #2563eb;
+  color: #fff;
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  white-space: nowrap;
+}
+
+/* Aligner le titre de la piste et son bouton X */
+.track-label-cell {
+  justify-content: space-between;
+  padding-right: 10px;
+}
+
+.track-del-btn {
+  background: transparent;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  font-size: 16px;
   line-height: 1;
-  transition:  opacity .15s;
 }
-.step-del:hover { opacity: .7; }
+.track-del-btn:hover {
+  color: var(--btn-red);
+}
+
+/* Le curseur vertical (Playhead) qui se déplace */
+.playhead-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--btn-red);
+  z-index: 10;
+  pointer-events: none; /* Empêche la ligne de bloquer les clics en dessous */
+}
+
+/* Le petit triangle en haut de la ligne rouge */
+.playhead-line::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -4px;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 6px solid var(--btn-red);
+}
+
+/* Scrollbar (Webkit) */
+.timeline-scrollable-area::-webkit-scrollbar {
+  height: 10px;
+  width: 10px;
+}
+.timeline-scrollable-area::-webkit-scrollbar-track {
+  background: #0b1121;
+}
+.timeline-scrollable-area::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 4px;
+}
+.timeline-scrollable-area::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
 
 /* ============================================================================
    SHARED BUTTON STYLES
    ============================================================================ */
 
 .btn {
-  padding:       8px 16px;
-  border-radius: 20px;
-  border:        none;
-  cursor:        pointer;
-  font-size:     13px;
-  font-weight:   600;
-  transition:    opacity .15s, transform .1s;
-  white-space:   nowrap;
-  line-height:   1.4;
+  padding: 6px 12px;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  transition: opacity .15s;
 }
 .btn:hover  { opacity: .85; }
-.btn:active { transform: scale(.97); }
-
-.btn-primary   { background: var(--btn-green);  color: #fff; }
-.btn-raspberry { background: var(--btn-red);    color: #fff; }
-.btn-secondary { background: var(--btn-dark);   color: #fff; }
-.btn-action    { background: #3b82f6;            color: #fff; }
-.btn-outline   { background: transparent; border: 2px solid #888; color: #555; }
-.btn-ghost     { background: transparent; color: rgba(255,255,255,.6); }
-.btn-sm        { padding: 5px 12px; font-size: 12px; }
+.btn-action { background: #2563eb; color: #fff; }
+.btn-ghost  { background: transparent; color: #94a3b8; border: 1px solid #475569; }
