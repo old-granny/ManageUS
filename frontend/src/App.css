@@ -1,4 +1,4 @@
-/* ============================================================================
+﻿/* ============================================================================
    App.css - Graphicus Stage Manager
    ============================================================================ */
 
@@ -37,15 +37,6 @@
 }
 
 /* -- Top bar ---------------------------------------------------------------- */
-.scene-topbar {
-  background: var(--navy-dark);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0 16px;
-  height: 48px;
-  border-bottom: 2px solid #000;
-}
 
 .topbar-links {
   display: flex;
@@ -116,146 +107,8 @@
   align-items: center;
 }
 
-.palette-title {
-  font-size:      11px;
-  font-weight:    700;
-  text-transform: uppercase;
-  letter-spacing: 1.2px;
-  color:          rgba(255,255,255,.55);
-}
 
-.palette-item {
-  display:        flex;
-  flex-direction: column;
-  align-items:    center;
-  gap:            4px;
-  width:          100%;
-  padding:        8px 6px;
-  border-radius:  8px;
-  cursor:         grab;
-  transition:     background .15s;
-  user-select:    none;
-}
-.palette-item:hover  { background: rgba(255,255,255,.18); }
-.palette-item:active { cursor: grabbing; }
-.palette-item span   { font-size: 11px; color: rgba(255,255,255,.8); }
-
-.palette-spacer { flex: 1; min-height: 8px; }
-
-/* -- Stage canvas (wood-floor drop target) ------------------------------------ */
-.stage-canvas {
-  position:   relative;
-  overflow:   hidden;
-  /* CSS wood-plank texture: vertical lines + subtle grain */
-  background-color:  var(--wood-mid);
-  background-image:
-    repeating-linear-gradient(
-      90deg,
-      rgba(0,0,0,.07)   0px,
-      transparent       1px,
-      transparent       30px,
-      rgba(0,0,0,.07)   31px
-    ),
-    repeating-linear-gradient(
-      180deg,
-      rgba(255,255,255,.04) 0px,
-      transparent           5px,
-      transparent           60px,
-      rgba(255,255,255,.04) 61px
-    );
-  border: 3px solid var(--wood-dark);
-}
-
-.stage-hint {
-  position:        absolute;
-  inset:           0;
-  display:         flex;
-  align-items:     center;
-  justify-content: center;
-  color:           rgba(0,0,0,.25);
-  font-size:       20px;
-  font-style:      italic;
-  pointer-events:  none;
-  user-select:     none;
-}
-
-/* A component that has been dropped onto the canvas */
-.placed-comp {
-  position:      absolute;
-  box-sizing:    border-box;
-  border:        1.5px solid transparent;
-  border-radius: 4px;
-  transition:    border-color 0.12s;
-  overflow:      visible;   /* handles spill outside the box */
-}
-.placed-comp:hover {
-  border-color: rgba(255,255,255,0.35);
-}
-/* Selected component highlight */
-.placed-comp.selected {
-  border-color: var(--btn-green);
-  box-shadow: 0 6px 18px rgba(34,197,94,0.12);
-}
-/* SVG inside a placed component fills the full box */
-.placed-comp > svg {
-  display: block;
-  width:   100%;
-  height:  100%;
-}
-
-/* ── Resize handles (8-way, appear on hover) ────────────────────────────── */
-.resize-handle {
-  position:      absolute;
-  width:         11px;
-  height:        11px;
-  background:    #fff;
-  border:        1.5px solid #555;
-  border-radius: 2px;
-  opacity:       0;
-  transition:    opacity 0.12s, background 0.1s;
-  z-index:       20;
-  box-sizing:    border-box;
-}
-.placed-comp:hover .resize-handle { opacity: 1; }
-.resize-handle:hover               { background: #FFD700; border-color: #333; }
-
-.comp-name {
-  position:       absolute;
-  bottom:         0;
-  left:           0;
-  right:          0;
-  font-size:      10px;
-  background:     rgba(0,0,0,0.65);
-  color:          #fff;
-  padding:        2px 5px;
-  border-radius:  0 0 3px 3px;
-  text-align:     center;
-  white-space:    nowrap;
-  overflow:       hidden;
-  text-overflow:  ellipsis;
-  pointer-events: none;
-}
-
-/* � remove button � hidden via CSS until the user hovers the component */
-.comp-remove {
-  position:        absolute;
-  top:             -8px;
-  right:           -8px;
-  background:      var(--btn-red);
-  color:           #fff;
-  border:          none;
-  border-radius:   50%;
-  width:           18px;
-  height:          18px;
-  font-size:       13px;
-  line-height:     1;
-  cursor:          pointer;
-  display:         none;
-  align-items:     center;
-  justify-content: center;
-}
-
-/* Stage View */
+/* Stage View (timeline) */
 .stage-view {
   flex: 1;
   background: var(--navy-mid);
@@ -285,7 +138,7 @@
   overflow: hidden;
 }
 
-/* Lumières (ronds gris) sur la bordure bleue marine */
+/* LumiÃ¨res (ronds gris) sur la bordure bleue marine */
 .border-lights {
   position: absolute;
   display: flex;
@@ -414,13 +267,13 @@
   background: #111827;
 }
 
-/* Règle graduée (0.x secondes) */
+/* RÃ¨gle graduÃ©e (0.x secondes) */
 .timeline-ruler-row {
   display: flex;
   height: 30px;
   background: #0f172a;
   border-bottom: 1px solid #000;
-  width: max-content; /* S'assure que la règle suit le contenu */
+  width: max-content; /* S'assure que la rÃ¨gle suit le contenu */
 }
 
 .ruler-tick-cell {
@@ -496,7 +349,7 @@
   color: var(--btn-red);
 }
 
-/* Le curseur vertical (Playhead) qui se déplace */
+/* Le curseur vertical (Playhead) qui se dÃ©place */
 .playhead-line {
   position: absolute;
   top: 0;
@@ -504,7 +357,7 @@
   width: 2px;
   background: var(--btn-red);
   z-index: 10;
-  pointer-events: none; /* Empêche la ligne de bloquer les clics en dessous */
+  pointer-events: none; /* EmpÃªche la ligne de bloquer les clics en dessous */
 }
 
 /* Le petit triangle en haut de la ligne rouge */
@@ -570,13 +423,13 @@
   border: 2px dashed #3b82f6;
 }
 
-/* 🔊 Exemple de texture pour un Haut-Parleur (si tu voulais lui mettre un fond texturé un jour) */
+/* ðŸ”Š Exemple de texture pour un Haut-Parleur (si tu voulais lui mettre un fond texturÃ© un jour) */
 .bg-texture-speaker {
   background: radial-gradient(circle, #333 20%, transparent 20%), #222;
   background-size: 4px 4px;
 }
 
-/* 🔥 Texture pour les effets ou zones de Flammes (Dégradé d'alerte chaud) */
+/* ðŸ”¥ Texture pour les effets ou zones de Flammes (DÃ©gradÃ© d'alerte chaud) */
 .bg-texture-flame {
   background: repeating-linear-gradient(45deg, #2a1405, #2a1405 10px, #3b1d04 10px, #3b1d04 20px);
   border: 2px dashed #f97316;

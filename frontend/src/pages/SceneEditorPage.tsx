@@ -413,27 +413,41 @@ export function SceneEditorPage() {
   }, [selectedId, components]);
 
   return (
-    <div className="scene-editor">
-      <header className="scene-topbar">
-        <span className="topbar-logo">Managus</span>
-        <label htmlFor="scene-name">Scène :</label>
+    /* Root: top-bar (48 px) | sidebar (200 px) + stage (rest), full viewport */
+    <div className="grid h-screen overflow-hidden" style={{ gridTemplateColumns: '200px 1fr', gridTemplateRows: '48px 1fr' }}>
+
+      {/* ── Top bar ───────────────────────────────────────────────────────── */}
+      <header className="col-span-2 flex items-center gap-3 px-4 bg-[#0b1121] border-b-2 border-black text-white text-sm">
+        <span className="font-bold text-lg mr-2">Managus</span>
+        <label htmlFor="scene-name" className="text-white/70 whitespace-nowrap">Scène :</label>
         <input
           id="scene-name"
           value={sceneName}
           onChange={e => setSceneName(e.target.value)}
           placeholder="Nom de la scène..."
+          className="bg-[#2d2d3f] border border-zinc-600 rounded-md text-white px-3 py-1 w-64 outline-none focus:border-green-500 transition-colors"
         />
-        <button onClick={resetCamera} title="Recentre la scène">
-          Recentre la vue ({Math.round(scale * 100)}%)
+        <button
+          onClick={resetCamera}
+          className="px-3 py-1 rounded bg-zinc-700 hover:bg-zinc-600 transition-colors text-white text-xs font-semibold"
+        >
+          Recentre ({Math.round(scale * 100)}%)
         </button>
-        <button onClick={() => setShowGrid(s => !s)} title={showGrid ? 'Masquer la grille' : 'Afficher la grille'} className="ml-2">
+        <button
+          onClick={() => setShowGrid(s => !s)}
+          className={`px-3 py-1 rounded text-xs font-semibold transition-colors ${showGrid ? 'bg-blue-700 hover:bg-blue-600' : 'bg-zinc-700 hover:bg-zinc-600'} text-white`}
+        >
           {showGrid ? 'Grille: On' : 'Grille: Off'}
         </button>
-        <button onClick={() => setSnapToGrid(s => !s)} title={snapToGrid ? 'Désactiver snap' : 'Activer snap'} className="ml-2">
+        <button
+          onClick={() => setSnapToGrid(s => !s)}
+          className={`px-3 py-1 rounded text-xs font-semibold transition-colors ${snapToGrid ? 'bg-purple-700 hover:bg-purple-600' : 'bg-zinc-700 hover:bg-zinc-600'} text-white`}
+        >
           {snapToGrid ? 'Snap: On' : 'Snap: Off'}
         </button>
       </header>
 
+      {/* ── Sidebar ───────────────────────────────────────────────────────── */}
       <Sidebar
         paletteKinds={PALETTE_KINDS}
         onPaletteDragStart={handlePaletteDragStart}
@@ -443,8 +457,8 @@ export function SceneEditorPage() {
         onReset={resetAllComponents}
       />
 
+      {/* ── Stage canvas ──────────────────────────────────────────────────── */}
       <main
-        className="stage-canvas"
         ref={stageRef}
         onDragOver={handleStageDragOver}
         onDrop={handleStageDrop}
@@ -454,10 +468,19 @@ export function SceneEditorPage() {
         onMouseUp={handleMouseUpOrLeave}
         onMouseLeave={handleMouseUpOrLeave}
         onContextMenu={handleContextMenu}
-        style={{ cursor: isPanning.current ? 'grabbing' : 'grab', overflow: 'hidden', position: 'relative' }}
+        className="relative overflow-hidden"
+        style={{
+          cursor: isPanning.current ? 'grabbing' : 'grab',
+          /* wood plank texture */
+          backgroundColor: '#c8a46e',
+          backgroundImage: `
+            repeating-linear-gradient(90deg, rgba(0,0,0,.07) 0px, transparent 1px, transparent 30px, rgba(0,0,0,.07) 31px),
+            repeating-linear-gradient(180deg, rgba(255,255,255,.04) 0px, transparent 5px, transparent 60px, rgba(255,255,255,.04) 61px)
+          `,
+        }}
       >
-        <div 
-          className="stage-viewport"
+        {/* virtual infinite canvas */}
+        <div
           style={{
             transform: `translate(${pan.x}px, ${pan.y}px) scale(${scale})`,
             transformOrigin: '0 0',
@@ -468,98 +491,103 @@ export function SceneEditorPage() {
             left: 0,
           }}
         >
-          {showGrid && <div className="stage-grid" style={gridStyle} />}
+          {/* Grid overlay */}
+          {showGrid && <div style={gridStyle} />}
+
+          {/* Empty hint */}
           {components.length === 0 && (
-            <p className="stage-hint" style={{ left: '50%', top: '50%', transform: 'translate(-50%, -50%)', position: 'absolute' }}>
+            <p className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-black/25 text-xl italic pointer-events-none select-none">
               Glisser des composantes n'importe où dans l'espace
             </p>
           )}
 
+          {/* Placed components */}
           {components.map(comp => {
-            const compW    = comp.width  ?? DEFAULT_COMP_W;
-            const compH    = comp.height ?? DEFAULT_COMP_H;
+            const compW = comp.width  ?? DEFAULT_COMP_W;
+            const compH = comp.height ?? DEFAULT_COMP_H;
             const iconSize = Math.min(Math.round(Math.min(DEFAULT_COMP_W, DEFAULT_COMP_H) * 0.58), 80);
             const isResizable = COMPONENT_CONFIG[comp.kind].isResizable;
+            const isSelected  = selectedId === comp.id;
 
             return (
               <div
                 key={comp.id}
                 onMouseDown={() => setSelectedId(comp.id)}
-                className={`placed-comp group ${isResizable ? 'resizable-zone' : 'fixed-equipment'} ${selectedId === comp.id ? 'selected' : ''}`}
+                className="group absolute box-border"
                 style={{
-                  position:       'absolute',
-                  left:           `${comp.x}px`,
-                  top:            `${comp.y}px`,
-                  width:          `${compW}px`,
-                  height:         `${compH}px`,
-                  transform:      'none',
-                  justifyContent: 'center',
+                  left:    `${comp.x}px`,
+                  top:     `${comp.y}px`,
+                  width:   `${compW}px`,
+                  height:  `${compH}px`,
+                  borderRadius: 4,
+                  border: isSelected
+                    ? '1.5px solid #22c55e'
+                    : '1.5px solid transparent',
+                  boxShadow: isSelected ? '0 0 0 2px rgba(34,197,94,0.2)' : undefined,
+                  transition: 'border-color 0.12s',
+                  overflow: 'visible',
                 }}
                 title={comp.name}
               >
-                {/* Render component via per-kind renderers (keeps markup centralized) */}
+                {/* Per-kind renderer */}
                 {(() => {
-                  const Renderer = isResizable ? ResizableComponents[comp.kind] : NonResizableComponents[comp.kind];
-                  if (Renderer) {
-                    return <Renderer comp={comp} onStartDrag={startCompDrag} showName={isVisibelName} />;
-                  }
-                  // Fallback if no renderer defined for this kind
-                  return isResizable ? (
-                    <div className={`w-full h-full ${COMPONENT_TEXTURES[comp.kind] || 'bg-zinc-800'}`} />
-                  ) : (
-                    <div onMouseDown={(e) => startCompDrag(e, comp)} className="cursor-move transform group-hover:scale-110 transition-transform duration-150">
-                      <ComponentIcon kind={comp.kind} size={iconSize} />
-                    </div>
-                  );
+                  const Renderer = isResizable
+                    ? ResizableComponents[comp.kind]
+                    : NonResizableComponents[comp.kind];
+                  if (Renderer) return <Renderer comp={comp} onStartDrag={startCompDrag} showName={isVisibelName} />;
+                  return isResizable
+                    ? <div className={`w-full h-full ${COMPONENT_TEXTURES[comp.kind] || 'bg-zinc-800'}`} />
+                    : (
+                      <div onMouseDown={(e) => startCompDrag(e, comp)} className="cursor-move w-full h-full flex items-center justify-center hover:scale-110 transition-transform duration-150">
+                        <ComponentIcon kind={comp.kind} size={iconSize} />
+                      </div>
+                    );
                 })()}
 
-                
-
+                {/* ── Overlay action buttons (visible on hover) ─────────── */}
+                {/* Bring forward */}
                 <button
-                  className="absolute -top-12 -right-3 p-1 bg-zinc-700 text-white rounded shadow transition-all duration-150 scale-0 opacity-0 group-hover:scale-100 group-hover:opacity-100 flex items-center justify-center cursor-pointer z-50"
+                  className="absolute -top-12 -right-3 p-1 bg-zinc-700 hover:bg-zinc-500 text-white rounded shadow transition-all duration-150 scale-0 opacity-0 group-hover:scale-100 group-hover:opacity-100 flex items-center justify-center z-50"
                   onMouseDown={(e) => { e.stopPropagation(); e.preventDefault(); }}
                   onClick={(e) => { e.stopPropagation(); bringForward(comp.id); }}
-                  title={"Monter d'une couche"}
+                  title="Monter d'une couche"
                 >
                   <ChevronUpIcon className="w-4 h-4" />
                 </button>
 
+                {/* Bring backward */}
                 <button
-                  className="absolute -top-8 -right-3 p-1 bg-zinc-700 text-white rounded shadow transition-all duration-150 scale-0 opacity-0 group-hover:scale-100 group-hover:opacity-100 flex items-center justify-center cursor-pointer z-50"
+                  className="absolute -top-7 -right-3 p-1 bg-zinc-700 hover:bg-zinc-500 text-white rounded shadow transition-all duration-150 scale-0 opacity-0 group-hover:scale-100 group-hover:opacity-100 flex items-center justify-center z-50"
                   onMouseDown={(e) => { e.stopPropagation(); e.preventDefault(); }}
                   onClick={(e) => { e.stopPropagation(); bringBackward(comp.id); }}
-                  title={"Descendre d'une couche"}
+                  title="Descendre d'une couche"
                 >
                   <ChevronDownIcon className="w-4 h-4" />
                 </button>
 
+                {/* Delete */}
                 <button
-                  className="absolute -top-3 -right-3 p-2 bg-zinc-800 text-white rounded-full shadow-md border border-zinc-700 hover:bg-red-600 hover:text-white hover:border-red-500 transition-all duration-200 scale-0 opacity-0 group-hover:scale-100 group-hover:opacity-100 flex items-center justify-center cursor-pointer z-50"
+                  className="absolute -top-2 -right-3 p-1.5 bg-zinc-800 hover:bg-red-600 text-white rounded-full shadow-md border border-zinc-700 hover:border-red-500 transition-all duration-200 scale-0 opacity-0 group-hover:scale-100 group-hover:opacity-100 flex items-center justify-center z-50"
                   onMouseDown={(e) => { e.stopPropagation(); e.preventDefault(); }}
-                  onClick={(e) => { 
-                    e.stopPropagation(); 
-                    removeComponent(comp.id); 
-                  }}
-                  title={"Retirer le " + comp.name}
+                  onClick={(e) => { e.stopPropagation(); removeComponent(comp.id); }}
+                  title={`Retirer ${comp.name}`}
                 >
-                  <TrashIcon className="w-4 h-4 transition-colors" />
+                  <TrashIcon className="w-4 h-4" />
                 </button>
 
-                {/* ── Poignées de redimensionnement ── */}
-                {isResizable && 
-                  RESIZE_HANDLES.map(h => (
-                    <div
-                      key={h.dir}
-                      className="resize-handle w-2 h-2 bg-blue-500 border border-white rounded-sm hover:bg-blue-400 hover:scale-125 transition-all z-20"
-                      style={{ position: 'absolute', cursor: h.cursor, ...h.style }}
-                      onMouseDown={(e) => {
-                        e.stopPropagation(); // Bloque l'enclenchement du drag sur les poignées
-                        e.preventDefault();
-                        startResize(comp.id, h.dir, e.clientX, e.clientY, comp);
-                      }}
-                    />
-                  ))
-                }
+                {/* ── Resize handles (8-way) ────────────────────────────── */}
+                {isResizable && RESIZE_HANDLES.map(h => (
+                  <div
+                    key={h.dir}
+                    className="absolute w-3 h-3 bg-white border border-zinc-500 rounded-sm opacity-0 group-hover:opacity-100 hover:bg-yellow-300 transition-all z-20"
+                    style={{ cursor: h.cursor, ...h.style }}
+                    onMouseDown={(e) => {
+                      e.stopPropagation();
+                      e.preventDefault();
+                      startResize(comp.id, h.dir, e.clientX, e.clientY, comp);
+                    }}
+                  />
+                ))}
               </div>
             );
           })}
