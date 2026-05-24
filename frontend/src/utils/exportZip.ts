@@ -16,6 +16,7 @@ function buildTaskEntry(
   step: TimelineStep & { type: 'action' },
   comp: PlacedComponent | undefined,
   ledId?: number,
+  fireId?: number,
 ): { task_id: string; args: Record<string, string> } {
   const action = step.action;
   const name   = comp?.name ?? step.componentId;
@@ -31,8 +32,8 @@ function buildTaskEntry(
       return { task_id: 'curtains', args: { mode: action } };
 
     case 'flame':
-      // FireTask expects { ID: "FIRE_1" … }
-      return { task_id: 'fire', args: { ID: name, mode: action } };
+      // FireTask expects { fire_id: "1"|"|2"|"3", mode: "ON"|"OFF" }
+      return { task_id: 'fire', args: { fire_id: String(fireId ?? 1), mode: action } };
 
     case 'corde':
       // RopeTask expects { mode: "UP"|"DOWN" }
@@ -85,7 +86,7 @@ export async function exportTimelineZip(
   // Process every step – startOffset is now the absolute time position
   zip.folder(`config/assets/`);
 
-  
+
   for (const step of timeline.steps) {
     if (step.type === 'wait') continue;   // wait steps are timing gaps, no device task
 
@@ -93,8 +94,9 @@ export async function exportTimelineZip(
     const endTime   = startTime + (step.duration ?? 1);
 
     const comp            = scene?.components.find(c => c.id === step.componentId);
-    const ledId           = comp?.kind === 'led' ? (comp.ledId ?? 1) : undefined;
-    const { task_id, args } = buildTaskEntry(step, comp, ledId);
+    const ledId           = comp?.kind === 'led'   ? (comp.ledId  ?? 1) : undefined;
+    const fireId          = comp?.kind === 'flame' ? (comp.fireId ?? 1) : undefined;
+    const { task_id, args } = buildTaskEntry(step, comp, ledId, fireId);
 
     sequence.push({
       task_id,

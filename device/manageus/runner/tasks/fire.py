@@ -11,15 +11,17 @@ class FireTask(Task):
         try:
             self._running.set()
 
-            id = self.args.get("ID")
+            fire_id = self.args.get("fire_id")
+            mode = self.args.get("mode", "ON")
+            state = gpio.HIGH if mode == "ON" else gpio.LOW
 
-            match id:
+            match fire_id:
                 case "1":
-                    gpio.output(gpio.FIRE_1, gpio.HIGH)
+                    gpio.output(gpio.FIRE_1, state)
                 case "2":
-                    gpio.output(gpio.FIRE_2, gpio.HIGH)
+                    gpio.output(gpio.FIRE_2, state)
                 case "3":
-                    gpio.output(gpio.FIRE_3, gpio.HIGH)
+                    gpio.output(gpio.FIRE_3, state)
                 case _:
                     pass
 

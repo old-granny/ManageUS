@@ -75,6 +75,7 @@ export interface PlacedComponent {
   width?:  number;         // component box width  in virtual px (default 80)
   height?: number;         // component box height in virtual px (default 80)
   ledId?:  number;         // stable 1-4 slot for LED components
+  fireId?: number;         // stable 1-3 slot for flame components
 }
 
 

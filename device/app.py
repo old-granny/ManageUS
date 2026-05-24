@@ -5,6 +5,7 @@ import asyncio
 import dotenv
 import manageus.handler as hadl
 import manageus.utils.screen_handler as sc
+import manageus.utils.gpio as gpio
 import threading
 
 import os
@@ -37,6 +38,7 @@ if __name__ == '__main__':
         ]
     )
     screen = sc.ScreenHandler()
+    gpio.initialize()
     
     # 2. Setup background asyncio thread
     background_loop = asyncio.new_event_loop()

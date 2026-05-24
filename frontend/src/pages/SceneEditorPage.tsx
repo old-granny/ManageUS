@@ -123,6 +123,12 @@ export function SceneEditorPage() {
       return;
     }
 
+    if (kind === 'flame' && components.filter(c => c.kind === 'flame').length >= 3) {
+      alert('Max 3 flammes sur la scène.');
+      draggingKind.current = null;
+      return;
+    }
+
     const rect = stageRef.current.getBoundingClientRect();
     const xInPixels = (e.clientX - rect.left - pan.x) / scale;
     const yInPixels = (e.clientY - rect.top - pan.y) / scale;
@@ -135,15 +141,21 @@ export function SceneEditorPage() {
       ? ([1, 2, 3, 4].find(n => !components.some(c => c.kind === 'led' && c.ledId === n)) ?? 1)
       : undefined;
 
+    // For flames, find the lowest free slot (1–3)
+    const fireId = kind === 'flame'
+      ? ([1, 2, 3].find(n => !components.some(c => c.kind === 'flame' && c.fireId === n)) ?? 1)
+      : undefined;
+
     const placed: PlacedComponent = {
       id:     generateId(kind),
       kind,
-      name:   `${KIND_LABELS[kind]} ${ledId ?? count}`,
+      name:   `${KIND_LABELS[kind]} ${ledId ?? fireId ?? count}`,
       x:      xInPixels - defaultSize.width / 2,
       y:      yInPixels - defaultSize.height / 2,
       width:  defaultSize.width,
       height: defaultSize.height,
-      ...(ledId !== undefined ? { ledId } : {}),
+      ...(ledId  !== undefined ? { ledId }  : {}),
+      ...(fireId !== undefined ? { fireId } : {}),
     };
 
     // snapshot for undo then snap initial placement if enabled and within threshold

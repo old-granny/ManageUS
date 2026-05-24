@@ -40,6 +40,14 @@ if _is_pi():
     HIGH = _gpio.HIGH
     LOW  = _gpio.LOW
 
+    def initialize():
+        _gpio.setmode(_gpio.BCM)
+        for pin in [LED_1, LED_2, LED_3, LED_4,
+                    FIRE_1, FIRE_2, FIRE_3,
+                    ROPE_UP, ROPE_DOWN,
+                    CURTAINS_OPEN, CURTAINS_CLOSE]:
+            _gpio.setup(pin, _gpio.OUT, initial=_gpio.LOW)
+
 else:
     import logging
     log = logging.getLogger("[GPIO]")
@@ -55,9 +63,17 @@ else:
     def setmode(mode):
         log.info(f"setmode({mode})")
 
-    def setup(pin, mode):
-        _pins[pin] = False
-        log.info(f"setup(pin={pin}, mode={mode})")
+    def setup(pin, mode, initial=False):
+        _pins[pin] = initial
+        log.info(f"setup(pin={pin}, mode={mode}, initial={initial})")
+
+    def initialize():
+        log.info("initialize() [stub]")
+        for pin in [LED_1, LED_2, LED_3, LED_4,
+                    FIRE_1, FIRE_2, FIRE_3,
+                    ROPE_UP, ROPE_DOWN,
+                    CURTAINS_OPEN, CURTAINS_CLOSE]:
+            setup(pin, OUT, initial=False)
 
     def output(pin, state):
         _pins[pin] = state
