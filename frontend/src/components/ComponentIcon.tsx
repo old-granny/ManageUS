@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import type { ComponentKind } from '../types';
 
 // =============================================================================
@@ -16,6 +17,7 @@ interface Props {
 }
 
 export function ComponentIcon({ kind, size = 48, width, height, active = false }: Props) {
+  const uid = useId();
   const w = width ?? size;
   const h = height ?? size;
   switch (kind) {
@@ -23,38 +25,11 @@ export function ComponentIcon({ kind, size = 48, width, height, active = false }
     // ── Spotlight ─────────────────────────────────────────────────────────────
     case 'light':
       return (
-        <svg width={w} height={h} viewBox="0 0 48 48" fill="none" aria-label="Lumière">
-          <defs>
-            <linearGradient id="light-body" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%"   stopColor="#3a3a3a" />
-              <stop offset="45%"  stopColor="#6e6e6e" />
-              <stop offset="100%" stopColor="#2e2e2e" />
-            </linearGradient>
-          </defs>
-          {/* Light beam — rendered first so housing sits on top */}
-          <polygon
-            points="16,27 32,27 43,48 5,48"
-            fill={active ? 'rgba(255,215,0,0.42)' : 'rgba(180,180,180,0.08)'}
-          />
-          {/* Housing — trapezoid wider at top */}
-          <path d="M12 7 Q24 5 36 7 L31 25 L17 25 Z" fill="url(#light-body)" />
-          {/* Top shine strip */}
-          <path d="M12 7 Q24 5 36 7 L34 10 Q24 8 14 10 Z" fill="rgba(255,255,255,0.13)" />
-          {/* Side shadow lines */}
-          <line x1="17" y1="25" x2="14" y2="13" stroke="rgba(0,0,0,0.25)" strokeWidth="0.6" />
-          <line x1="31" y1="25" x2="34" y2="13" stroke="rgba(0,0,0,0.25)" strokeWidth="0.6" />
-          {/* Lens bezel */}
-          <ellipse cx="24" cy="25" rx="8.5" ry="2.8" fill="#1a1a1a" />
-          {/* Lens */}
-          <ellipse cx="24" cy="25" rx="6" ry="2" fill={active ? '#FFD000' : '#606060'} />
-          {active && <ellipse cx="24" cy="25" rx="6" ry="2" fill="rgba(255,255,200,0.3)" />}
-          {/* Lens glare */}
-          <ellipse cx="21.5" cy="24.3" rx="1.4" ry="0.55"
-            fill="rgba(255,255,255,0.45)" transform="rotate(-20 21.5 24.3)" />
-          {/* Top clamp */}
-          <rect x="20" y="1" width="8" height="3" rx="1.5" fill="#222" />
-          <rect x="22"  y="4" width="4" height="3" fill="#2a2a2a" />
-        </svg>
+        <img
+          src="/projecteurs.svg"
+          alt="Lumière"
+          style={{ width: w, height: h, objectFit: 'contain', display: 'block' }}
+        />
       );
 
     // ── Speaker cabinet ────────────────────────────────────────────────────────
@@ -177,70 +152,43 @@ export function ComponentIcon({ kind, size = 48, width, height, active = false }
     // ── Stage Section (top-down floor view) ───────────────────────────────────
     case 'section_scene':
       return (
-        <svg width={w} height={h} viewBox="0 0 48 48" fill="none" aria-label="Section de Scène">
-          {/* Stage border */}
-          <rect x="2" y="2" width="44" height="44" rx="4" fill="#4E342E" />
-          {/* Stage planks — alternating colour */}
-          {[0,1,2,3,4,5].map(i => (
-            <rect key={i}
-              x="4" y={4 + i * 7} width="40" height="6"
-              fill={i % 2 === 0 ? '#C9A877' : '#B8966A'}
-              rx="0.5"
-            />
-          ))}
-          {/* Plank gaps */}
-          {[0,1,2,3,4].map(i => (
-            <rect key={i} x="4" y={10 + i * 7} width="40" height="1" fill="#4E342E" />
-          ))}
-          {/* Plank joints — offset per row for realism */}
-          {[0,2,4].map(i => (
-            <line key={`ja-${i}`}
-              x1="24" y1={4 + i * 7} x2="24" y2={10 + i * 7}
-              stroke="#4E342E" strokeWidth="1.5" />
-          ))}
-          {[1,3,5].map(i => (
-            <line key={`jb-${i}`}
-              x1="16" y1={4 + i * 7} x2="16" y2={10 + i * 7}
-              stroke="#4E342E" strokeWidth="1.5" />
-          ))}
-          {/* Stage centre-cross mark */}
-          <g stroke="#FFD54F" strokeWidth="2" strokeLinecap="round" opacity="0.85">
-            <line x1="22" y1="21" x2="26" y2="25" />
-            <line x1="26" y1="21" x2="22" y2="25" />
-          </g>
-        </svg>
-      );
+      <svg width={w} height={h} viewBox="0 0 48 48" fill="none" aria-label="Section de Scène">
+        {/* 🎛️ Stage border — Noir pur profond */}
+        
+        {[0, 1, 2, 3, 4, 5].map(i => (
+          <rect key={i}
+            x="4" y={4 + i * 7} width="40" height="6"
+            fill={i % 2 === 0 ? '#18181b' : '#27272a'}
+            rx="0.5"
+          />
+        ))}
+        
+        {[0, 1, 2, 3, 4].map(i => (
+          <rect key={i} x="4" y={10 + i * 7} width="40" height="1" fill="#09090b" />
+        ))}
+        
+        {/* Plank joints — Joints décalés sombres pour garder le réalisme texturé */}
+        {[0, 2, 4].map(i => (
+          <line key={`ja-${i}`}
+            x1="24" y1={4 + i * 7} x2="24" y2={10 + i * 7}
+            stroke="#09090b" strokeWidth="1.5" />
+        ))}
+        {[1, 3, 5].map(i => (
+          <line key={`jb-${i}`}
+            x1="16" y1={4 + i * 7} x2="16" y2={10 + i * 7}
+            stroke="#09090b" strokeWidth="1.5" />
+        ))}
+      </svg>
+    );
 
     // ── Flame effect ───────────────────────────────────────────────────────────
     case 'flame':
       return (
-        <svg width={w} height={h} viewBox="0 0 48 48" fill="none" aria-label="Flamme">
-          {/* Ground glow when active */}
-          {active && <ellipse cx="24" cy="41" rx="11" ry="4" fill="rgba(255,100,0,0.28)" />}
-          {/* Outer flame */}
-          <path
-            d="M24 40 Q11 33 14 21 Q16 11 24 3 Q23 15 29 19 Q36 9 32 3 Q44 15 40 27 Q42 35 24 40 Z"
-            fill={active ? '#E65100' : '#6a6a6a'}
-          />
-          {/* Mid flame */}
-          <path
-            d="M24 38 Q15 31 17 21 Q19 13 24 7 Q23 17 28 21 Q34 13 31 7 Q41 17 38 27 Q39 33 24 38 Z"
-            fill={active ? '#FF6D00' : '#7a7a7a'}
-          />
-          {/* Inner flame */}
-          <path
-            d="M24 36 Q18 29 20 21 Q21 15 24 11 Q24 19 27 21 Q32 15 30 11 Q38 19 35 27 Q36 31 24 36 Z"
-            fill={active ? '#FFA000' : '#8a8a8a'}
-          />
-          {/* Hot core */}
-          <path
-            d="M24 33 Q20 27 22 21 Q23 17 24 14 Q24 21 27 23 Q31 17 29 14 Q35 21 33 27 Q33 30 24 33 Z"
-            fill={active ? '#FFD740' : '#999'}
-          />
-          {/* Burner nozzle */}
-          <rect x="19" y="39" width="10" height="6" rx="2" fill="#3a3a3a" />
-          <rect x="15" y="43" width="18" height="4" rx="2" fill="#2a2a2a" />
-        </svg>
+        <img
+          src="/flame.svg"
+          alt="Flamme"
+          style={{ width: w, height: h, objectFit: 'contain', display: 'block' }}
+        />
       );
 
     // ── Corde — theater fly-system rope ───────────────────────────────────────

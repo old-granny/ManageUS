@@ -20,34 +20,78 @@ export function Headbar({
     onToggleSnapToGrid,
 }: HeadbarProps) {
     return (
-        <header className="col-span-2 flex items-center gap-3 px-4 bg-[#0b1121] border-b-2 border-black text-white text-sm">
-            <span className="font-bold text-lg mr-2">Managus</span>
-            <label htmlFor="scene-name" className="text-white/70 whitespace-nowrap">Scène :</label>
-            <input
-                id="scene-name"
-                value={sceneName}
-                onChange={e => onSceneNameChange(e.target.value)}
-                placeholder="Nom de la scène..."
-                className="bg-[#2d2d3f] border border-zinc-600 rounded-md text-white px-3 py-1 w-64 outline-none focus:border-green-500 transition-colors"
-            />
-            <button
-                onClick={onResetCamera}
-                className="px-3 py-1 rounded bg-zinc-700 hover:bg-zinc-600 transition-colors text-white text-xs font-semibold"
-            >
-                Recentre ({Math.round(scale * 100)}%)
-            </button>
+        /* 🎛️ Fond zinc-950 et bordure fine pour s'aligner parfaitement avec la Sidebar */
+        <header className="relative pr-6 col-span-2 flex items-center gap-6 bg-zinc-950 border-b border-zinc-800 text-white text-xs w-full min-h-14 shadow-md z-30 select-none">        
+            <div className="w-0.25"></div>
+            {/* Zone Logo épurée */}
+            <div className="flex items-center gap-2 ">
+                <img
+                    src="/Logo.svg"
+                    alt="Hack the Sommet"
+                    className="h-10 w-10 shrink-0 "
+                />
+                <div className="font-['JetBrains_Mono'] select-none tracking-[0.31em] text-sm ">
+                    {/* MANAGE : Couleur blanche */}
+                    <span className="text-white font-normal">
+                        Manage
+                    </span>
+                    {/* US : Vert Sherbrooke et Gras */}
+                    <span className="text-[#008358] font-bold">
+                        US
+                    </span>
+                </div>
+            </div>
+
+            <div className="flex flex-col justify-center pl-4">
+                <input
+                    value={sceneName}
+                    onChange={e => onSceneNameChange(e.target.value)}
+                    placeholder="Nom de la scène..."
+                    /* 🚀 h-10 force une hauteur parfaite, py-2.5 donne de l'espace au texte, et border-zinc-700/50 le rend plus visible */
+                    className="bg-zinc-900/80 border border-zinc-700/50 rounded-xl text-zinc-100 h-7 w-54 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all font-medium text-xs placeholder-zinc-600 shadow-[inset_0_1px_2px_rgba(0,0,0,0.4)]"
+                />
+            </div>
+            
             <button
                 onClick={onToggleGrid}
-                className={`px-3 py-1 rounded text-xs font-semibold transition-colors ${showGrid ? 'bg-blue-700 hover:bg-blue-600' : 'bg-zinc-700 hover:bg-zinc-600'} text-white`}
+                className={`px-4 py-2 rounded text-xs font-medium border transition-colors cursor-pointer ${
+                    showGrid
+                        ? 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700'
+                        : 'bg-transparent text-zinc-400 border-zinc-700 hover:border-zinc-500 hover:text-zinc-200'
+                }`}
             >
-                {showGrid ? 'Grille: On' : 'Grille: Off'}
+                Grille
             </button>
+
             <button
                 onClick={onToggleSnapToGrid}
-                className={`px-3 py-1 rounded text-xs font-semibold transition-colors ${snapToGrid ? 'bg-purple-700 hover:bg-purple-600' : 'bg-zinc-700 hover:bg-zinc-600'} text-white`}
+                className={`px-4 py-2 rounded text-xs font-medium border transition-colors cursor-pointer ${
+                    snapToGrid
+                        ? 'bg-purple-600 text-white border-purple-600 hover:bg-purple-700'
+                        : 'bg-transparent text-zinc-400 border-zinc-700 hover:border-zinc-500 hover:text-zinc-200'
+                }`}
             >
-                {snapToGrid ? 'Snap: On' : 'Snap: Off'}
+                Ancrage
             </button>
+
+            <button
+                onClick={onResetCamera}
+                className="px-4 py-2 rounded text-xs font-medium bg-transparent text-zinc-400 border border-zinc-700 hover:border-zinc-500 hover:text-zinc-200 transition-colors cursor-pointer"
+            >
+                Recentrer
+            </button>
+
+            <div className="hidden lg:flex absolute right-6 top-1/2 -translate-y-1/2 items-center gap-5 whitespace-nowrap">
+                <div className="flex flex-col items-end text-[10px] font-medium text-zinc-500 tracking-wider">
+                    <span>clic-droit + glisser pour naviger</span>
+                    <span>molette pour zoomer</span>
+                </div>
+                
+                {/* Badge d'affichage du facteur d'échelle (Zoom) */}
+                <div className="bg-zinc-900 rounded-md px-2.5 py-1.5 font-mono text-xs font-bold text-zinc-400 shadow-[inset_0_1px_2px_rgba(0,0,0,0.4)]">
+                    {Math.round(scale * 100)}%
+                </div>
+            </div>    
         </header>
     );
 }

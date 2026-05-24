@@ -16,6 +16,16 @@ const DEFAULT_COMP_H = configData.DEFAULT_COMP_H;
 
 const PALETTE_KINDS: ComponentKind[] = ['light', 'speaker', 'projector', 'curtain', 'section_scene', 'corde', 'flame'];
 
+const DEFAULT_COMPONENT_SIZES: Record<ComponentKind, { width: number; height: number }> = {
+  light: { width: 92, height: 72 },
+  speaker: { width: 72, height: 96 },
+  projector: { width: 102, height: 68 },
+  curtain: { width: 128, height: 170 },
+  section_scene: { width: 180, height: 120 },
+  corde: { width: 56, height: 118 },
+  flame: { width: 64, height: 96 },
+};
+
 type ResizeDir = 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w' | 'nw';
 
 interface ResizingState {
@@ -110,15 +120,16 @@ export function SceneEditorPage() {
     const yInPixels = (e.clientY - rect.top - pan.y) / scale;
 
     const count = components.filter(c => c.kind === kind).length + 1;
+    const defaultSize = DEFAULT_COMPONENT_SIZES[kind];
 
     const placed: PlacedComponent = {
       id:     generateId(kind),
       kind,
       name:   `${KIND_LABELS[kind]} ${count}`,
-      x:      xInPixels - DEFAULT_COMP_W / 2,
-      y:      yInPixels - DEFAULT_COMP_H / 2,
-      width:  DEFAULT_COMP_W,
-      height: DEFAULT_COMP_H,
+      x:      xInPixels - defaultSize.width / 2,
+      y:      yInPixels - defaultSize.height / 2,
+      width:  defaultSize.width,
+      height: defaultSize.height,
     };
 
     // snapshot for undo then snap initial placement if enabled and within threshold
@@ -316,6 +327,35 @@ export function SceneEditorPage() {
     };
   }
 
+  function handleImport() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json,application/json';
+    input.onchange = (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        try {
+          const data = JSON.parse(ev.target?.result as string) as Scene;
+          if (!Array.isArray(data.components)) {
+            alert('Fichier JSON invalide : aucune liste de composantes trouvée.');
+            return;
+          }
+          pushHistory();
+          setComponents(data.components);
+          if (data.name) setSceneName(data.name);
+          dispatch({ type: 'SAVE_SCENE', scene: data });
+          dispatch({ type: 'SET_ACTIVE_SCENE', id: data.id });
+        } catch {
+          alert('Erreur lors de la lecture du fichier JSON.');
+        }
+      };
+      reader.readAsText(file);
+    };
+    input.click();
+  }
+
   function handleSave() {
     const scene = buildScene();
     dispatch({ type: 'SAVE_SCENE', scene });
@@ -435,7 +475,7 @@ export function SceneEditorPage() {
 
   return (
     /* Root: top-bar (48 px) | sidebar (200 px) + stage (rest), full viewport */
-    <div className="grid h-screen overflow-hidden" style={{ gridTemplateColumns: '200px 1fr', gridTemplateRows: '48px 1fr' }}>
+    <div className="grid h-screen overflow-hidden" style={{ gridTemplateColumns: '240px 1fr', gridTemplateRows: 'auto 1fr' }}>
 
       {/* ── Top bar ───────────────────────────────────────────────────────── */}
       <Headbar
@@ -457,6 +497,7 @@ export function SceneEditorPage() {
         onSave={handleSave}
         onGoToTimeline={handleGoToTimeline}
         onReset={resetAllComponents}
+        onImport={handleImport}
       />
 
       {/* ── Stage canvas ──────────────────────────────────────────────────── */}

@@ -49,7 +49,7 @@ export function RenderComponents({
 
         const compW = isResizable ? comp.width : 100;
         const compH = isResizable ? comp.height : 100;
-        const iconSize = Math.min(Math.round(Math.min(compW, compH) * 0.58), 80);
+        const iconSize = Math.min(Math.round(Math.min(compW ?? 100, compH ?? 100) * 0.58), 80);
         const isSelected = selectedId === comp.id;
 
         return (
@@ -82,7 +82,7 @@ export function RenderComponents({
             })()}
 
             <button
-              className="absolute -top-12 -right-3 p-1 bg-zinc-700 hover:bg-zinc-500 text-white rounded shadow transition-all duration-150 scale-0 opacity-0 group-hover:scale-100 group-hover:opacity-100 flex items-center justify-center z-50"
+              className="absolute top-7 right-0.25 p-1 bg-zinc-700 hover:bg-zinc-500 text-white rounded shadow transition-all duration-150 scale-0 opacity-0 group-hover:scale-100 group-hover:opacity-100 flex items-center justify-center z-50"
               onMouseDown={(e) => { e.stopPropagation(); e.preventDefault(); }}
               onClick={(e) => { e.stopPropagation(); onBringForward(comp.id); }}
               title="Monter d'une couche"
@@ -91,7 +91,7 @@ export function RenderComponents({
             </button>
 
             <button
-              className="absolute -top-7 -right-3 p-1 bg-zinc-700 hover:bg-zinc-500 text-white rounded shadow transition-all duration-150 scale-0 opacity-0 group-hover:scale-100 group-hover:opacity-100 flex items-center justify-center z-50"
+              className="absolute top-12 right-0.25 p-1 bg-zinc-700 hover:bg-zinc-500 text-white rounded shadow transition-all duration-150 scale-0 opacity-0 group-hover:scale-100 group-hover:opacity-100 flex items-center justify-center z-50"
               onMouseDown={(e) => { e.stopPropagation(); e.preventDefault(); }}
               onClick={(e) => { e.stopPropagation(); onBringBackward(comp.id); }}
               title="Descendre d'une couche"
@@ -100,13 +100,21 @@ export function RenderComponents({
             </button>
 
             <button
-              className="absolute -top-2 -right-3 p-1.5 bg-zinc-800 hover:bg-red-600 text-white rounded-full shadow-md border border-zinc-700 hover:border-red-500 transition-all duration-200 scale-0 opacity-0 group-hover:scale-100 group-hover:opacity-100 flex items-center justify-center z-50"
+              className="absolute -top-2 right-1 p-1.5 bg-zinc-800 hover:bg-red-600 text-white rounded-full shadow-md border border-zinc-700 hover:border-red-500 transition-all duration-200 scale-0 opacity-0 group-hover:scale-100 group-hover:opacity-100 flex items-center justify-center z-50"
               onMouseDown={(e) => { e.stopPropagation(); e.preventDefault(); }}
               onClick={(e) => { e.stopPropagation(); onRemoveComponent(comp.id); }}
               title={`Retirer ${comp.name}`}
             >
               <TrashIcon className="w-4 h-4" />
             </button>
+
+            {showName && (
+              <div className="absolute left-1/2 -translate-x-1/2 top-full mt-1.5 pointer-events-none select-none opacity-0 group-hover:opacity-100 transition-opacity z-10 whitespace-nowrap">
+                <span className="text-[11px] font-medium text-zinc-100 bg-zinc-900/90 px-2 py-0.5 rounded">
+                  {comp.name}
+                </span>
+              </div>
+            )}
 
             {isResizable && RESIZE_HANDLES.map(h => (
               <div
