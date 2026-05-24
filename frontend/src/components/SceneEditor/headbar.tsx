@@ -1,3 +1,5 @@
+import { ArrowRightIcon } from '@heroicons/react/24/outline';
+
 interface HeadbarProps {
     sceneName: string;
     onSceneNameChange: (value: string) => void;
@@ -54,13 +56,13 @@ export function Headbar({
                     value={sceneName}
                     onChange={e => onSceneNameChange(e.target.value)}
                     placeholder="Scene name..."
-                    className="bg-zinc-900/80 border border-zinc-700/50 rounded-xl text-zinc-100 h-7 w-54 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all font-medium text-xs placeholder-zinc-600 shadow-[inset_0_1px_2px_rgba(0,0,0,0.4)]"
+                    className="bg-zinc-900/80 border border-zinc-700/50 rounded-lg text-zinc-100 h-7 w-54 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all font-medium text-xs placeholder-zinc-600 shadow-[inset_0_1px_2px_rgba(0,0,0,0.4)]"
                 />
             </div>
             
             <button
                 onClick={onToggleGrid}
-                className={`w-[6.5rem] py-2 rounded text-sm font-medium border transition-colors cursor-pointer ${
+                className={`w-[5.5rem] py-2 rounded text-sm font-medium border transition-colors cursor-pointer ${
                     showGrid
                         ? 'bg-blue-600 text-white border-blue-600 hover:bg-blue-500'
                         : 'bg-transparent text-zinc-400 border-zinc-700 hover:border-zinc-500 hover:text-zinc-200'
@@ -71,7 +73,7 @@ export function Headbar({
 
             <button
                 onClick={onToggleSnapToGrid}
-                className={`w-[6.5rem] py-2 rounded text-sm font-medium border transition-colors cursor-pointer ${
+                className={`w-[5.5rem] py-2 rounded text-sm font-medium border transition-colors cursor-pointer ${
                     snapToGrid
                         ? 'bg-violet-600 text-white border-violet-600 hover:bg-violet-500'
                         : 'bg-transparent text-zinc-400 border-zinc-700 hover:border-zinc-500 hover:text-zinc-200'
@@ -84,28 +86,28 @@ export function Headbar({
 
             <button
                 onClick={onResetCamera}
-                className="w-[6.5rem] py-2 rounded text-sm font-medium border transition-colors cursor-pointer bg-transparent text-zinc-400 border-zinc-700 hover:border-zinc-500 hover:text-zinc-200"
+                className="w-[5.5rem] py-2 rounded text-sm font-medium border transition-colors cursor-pointer bg-transparent text-zinc-400 border-zinc-700 hover:border-zinc-500 hover:text-zinc-200"
             >
                 Recenter
             </button>
 
             <button
                 onClick={onImport}
-                className="w-[6.5rem] py-2 rounded text-sm font-medium border transition-colors cursor-pointer bg-transparent text-zinc-400 border-zinc-700 hover:border-zinc-500 hover:text-zinc-200"
+                className="w-[5.5rem] py-2 rounded text-sm font-medium border transition-colors cursor-pointer bg-transparent text-zinc-400 border-zinc-700 hover:border-zinc-500 hover:text-zinc-200"
             >
                 Import
             </button>
 
             <button
                 onClick={onExport}
-                className="w-[6.5rem] py-2 rounded text-sm font-medium border transition-colors cursor-pointer bg-transparent text-teal-400 border-teal-800 hover:bg-teal-950 hover:border-teal-600"
+                className="w-[5.5rem] py-2 rounded text-sm font-medium border transition-colors cursor-pointer bg-transparent text-teal-400 border-teal-800 hover:bg-teal-950 hover:border-teal-600"
             >
                 Export
             </button>
 
             <button
                 onClick={onReset}
-                className="w-[6.5rem] py-2 rounded text-sm font-medium border transition-colors cursor-pointer bg-transparent text-red-400 border-red-800 hover:bg-red-950 hover:border-red-600"
+                className="w-[5.5rem] py-2 rounded text-sm font-medium border transition-colors cursor-pointer bg-transparent text-red-400 border-red-800 hover:bg-red-950 hover:border-red-600"
             >
                 Reset
             </button>
@@ -114,12 +116,12 @@ export function Headbar({
                 
             <button
                 onClick={onGoToTimeline}
-                className="w-[6.5rem] py-2 rounded text-sm font-medium border transition-colors cursor-pointer bg-emerald-600 text-white border-emerald-600 hover:bg-emerald-500"
+                className="w-[5.5rem] py-2 rounded text-sm font-medium border transition-colors cursor-pointer bg-emerald-600 text-white border-emerald-600 hover:bg-emerald-500 flex items-center gap-1.5 justify-center"
             >
-                Timeline
+                Timeline <ArrowRightIcon className="w-4 h-4" />
             </button>
 
-            <div className="hidden xl:flex absolute right-6 top-1/2 -translate-y-1/2 items-center gap-5 whitespace-nowrap">
+            <div className="hidden 2xl:flex absolute right-6 top-1/2 -translate-y-1/2 items-center gap-5 whitespace-nowrap">
                 <div className="flex flex-col items-end text-[10px] font-medium text-zinc-500 tracking-wider">
                     <span>right click + move mouse</span>
                     <span>mouse wheel to zoom</span>

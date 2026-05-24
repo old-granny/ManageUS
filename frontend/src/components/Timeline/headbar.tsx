@@ -1,4 +1,5 @@
 ﻿import { useState } from 'react';
+import { ArrowLeftIcon } from '@heroicons/react/24/outline';
 import configData  from '../../config.json'
 
 interface HeadbarTimeLineProps {
@@ -233,11 +234,16 @@ export function HeadbarTimeLine({ onSave, onUpload, onGoToSceneEditor }: Headbar
       )}
 
       <div className="ml-auto flex items-center gap-3">
-        <button onClick={onSave} className={`${btn} bg-transparent text-zinc-400 border-zinc-700 hover:border-zinc-500 hover:text-zinc-200`}>
+        <button onClick={onSave}         
+          className={`${btn} bg-transparent text-zinc-400 border-zinc-700 hover:border-zinc-500 hover:text-zinc-200`}
+          >
           Save timeline
         </button>
-        <button onClick={onGoToSceneEditor} className={`${btn} bg-transparent text-zinc-400 border-zinc-700 hover:border-zinc-500 hover:text-zinc-200`}>
-          Modify the current scene
+        <button onClick={onGoToSceneEditor} 
+                className="w-[12rem] py-1.5 rounded text-sm font-medium border transition-colors cursor-pointer bg-emerald-600 text-white border-emerald-600 hover:bg-emerald-500 flex items-center gap-1.5 justify-center"
+                >
+                  <ArrowLeftIcon className="w-4 h-4" />
+           Modify the current scene
         </button>
       </div>
     </header>
