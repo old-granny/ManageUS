@@ -1,5 +1,6 @@
 import JSZip from 'jszip';
 import type { Timeline, Scene, PlacedComponent } from '../types';
+import configData  from '../config.json'
 
 type TimelineStep = Timeline['steps'][number];
 
@@ -153,7 +154,8 @@ export async function exportTimelineZip(
   // ── Upload to backend ─────────────────────────────────────────────────────
   const formData = new FormData();
   formData.append('file', blob, 'config.zip');
-  const uploadRes = await fetch('http://localhost:3000/manager/upload', { method: 'POST', body: formData });
+  const url_base = configData.HOSTNAME;
+  const uploadRes = await fetch(`${url_base}/manager/upload`, { method: 'POST', body: formData });
   if (!uploadRes.ok) {
     throw new Error(`Upload failed: ${uploadRes.status}`);
   }

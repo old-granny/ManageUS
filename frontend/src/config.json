@@ -4,5 +4,6 @@
     "DEFAULT_COMP_W": 80,
     "DEFAULT_COMP_H": 80,
     "MIN_COMP_SIZE": 40,
-    "MAX_LED": 4
+    "MAX_LED": 4,
+    "HOSTNAME" : "https://manageUS.marc-dev"
 }

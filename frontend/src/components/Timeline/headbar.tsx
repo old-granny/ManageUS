@@ -1,4 +1,5 @@
 ﻿import { useState } from 'react';
+import configData  from '../../config.json'
 
 interface HeadbarTimeLineProps {
   onSave:            () => void;
@@ -22,10 +23,11 @@ export function HeadbarTimeLine({ onSave, onUpload, onGoToSceneEditor }: Headbar
     setConnectionState('connecting');
     setErrorMsg('');
     try {
-      const res = await fetch('http://localhost:3000/manager/connect', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: managerCode }),
+        const url_base = configData.HOSTNAME;
+        const res = await fetch(`${url_base}/manager/connect`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code: managerCode }),
       });
       if (res.ok) {
         setConnectionState('connected');
@@ -50,7 +52,8 @@ export function HeadbarTimeLine({ onSave, onUpload, onGoToSceneEditor }: Headbar
     setErrorMsg('');
     try {
       await onUpload();
-      const res = await fetch('http://localhost:3000/manager/send', { method: 'POST' });
+      const url_base = configData.HOSTNAME;
+      const res = await fetch(`${url_base}/manager/send`, { method: 'POST' });
       if (res.ok) {
         setSendState('sent');
         setSequenceState('ready');
@@ -71,21 +74,24 @@ export function HeadbarTimeLine({ onSave, onUpload, onGoToSceneEditor }: Headbar
 
   async function handleStart() {
     try {
-      const res = await fetch('http://localhost:3000/manager/start', { method: 'POST' });
+      const url_base = configData.HOSTNAME;
+      const res = await fetch(`${url_base}/manager/start`, { method: 'POST' });
       if (res.ok) setSequenceState('running');
     } catch { /* serveur pas encore pret */ }
   }
 
   async function handleStop() {
     try {
-      const res = await fetch('http://localhost:3000/manager/stop', { method: 'POST' });
+      const url_base = configData.HOSTNAME;
+      const res = await fetch(`${url_base}/manager/stop`, { method: 'POST' });
       if (res.ok) setSequenceState('stopped');
     } catch { /* serveur pas encore pret */ }
   }
 
   async function handleReset() {
     try {
-      await fetch('http://localhost:3000/manager/reset', { method: 'POST' });
+        const url_base = configData.HOSTNAME;
+        await fetch(`${url_base}/manager/reset`, { method: 'POST' });
     } catch { /* serveur pas encore pret */ }
     setSendState('idle');
     setSequenceState('ready');
