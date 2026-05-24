@@ -6,15 +6,21 @@ import ResizableComponents         from '../ResizableObjects.tsx';
 import NonResizableComponents      from '../NonRezisableObjects.tsx';
 
 interface SceneCreatorTimeLineProps {
-  scene:          Scene | undefined;
-  selectedComps:  PlacedComponent[];
-  onToggleComp:   (comp: PlacedComponent) => void;
+  scene:            Scene | undefined;
+  selectedComps:    PlacedComponent[];
+  onToggleComp:     (comp: PlacedComponent) => void;
+  isPlaying?:       boolean;
+  componentStates?: Map<string, string>;
 }
+
+const ACTIVE_ACTIONS = new Set(['ON', 'OPEN', 'PLAY', 'SHOW', 'PULL']);
 
 export function SceneCreatorTimeLine({
   scene,
   selectedComps,
   onToggleComp,
+  isPlaying = false,
+  componentStates,
 }: SceneCreatorTimeLineProps) {
   const [viewScale, setViewScale] = useState<number>(0.15);
   const [viewPan,   setViewPan]   = useState<{ x: number; y: number }>({ x: 0, y: 0 });
@@ -147,6 +153,10 @@ export function SceneCreatorTimeLine({
           const isResizable = COMPONENT_CONFIG[comp.kind].isResizable;
           const isSelected  = selectedComps.some(c => c.id === comp.id);
 
+          const liveState = componentStates?.get(comp.id);
+          const isOn      = liveState !== undefined && ACTIVE_ACTIONS.has(liveState);
+          const hasState  = liveState !== undefined;
+
           return (
             <div
               key={comp.id}
@@ -157,11 +167,19 @@ export function SceneCreatorTimeLine({
                 width:      `${compW}px`,
                 height:     `${compH}px`,
                 borderRadius: 4,
-                border:     isSelected ? '2px solid #22c55e' : '2px solid transparent',
-                boxShadow:  isSelected ? '0 0 0 3px rgba(34,197,94,0.3)' : undefined,
+                border: isSelected
+                  ? '2px solid #22c55e'
+                  : hasState
+                    ? `2px solid ${isOn ? '#4ade80' : '#f87171'}`
+                    : '2px solid transparent',
+                boxShadow: isSelected
+                  ? '0 0 0 3px rgba(34,197,94,0.3)'
+                  : hasState && isOn
+                    ? '0 0 0 3px rgba(74,222,128,0.25), 0 0 14px 4px rgba(74,222,128,0.2)'
+                    : undefined,
                 cursor:     'pointer',
                 overflow:   'visible',
-                transition: 'border-color 0.12s',
+                transition: 'border-color 0.15s, box-shadow 0.15s',
               }}
               onClick={() => {
                 if (didPanView.current) return;
@@ -175,6 +193,32 @@ export function SceneCreatorTimeLine({
                 if (Renderer) return <Renderer comp={comp} onStartDrag={() => {}} showName={true} />;
                 return <ComponentIcon kind={comp.kind} size={Math.round(Math.min(compW, compH) * 0.7)} />;
               })()}
+
+              {/* Live state badge */}
+              {hasState && (
+                <div
+                  style={{
+                    position:        'absolute',
+                    bottom:          -20,
+                    left:            '50%',
+                    transform:       'translateX(-50%)',
+                    fontSize:        10,
+                    fontWeight:      700,
+                    padding:         '2px 6px',
+                    borderRadius:    4,
+                    background:      isOn ? 'rgba(74,222,128,0.9)' : 'rgba(239,68,68,0.9)',
+                    color:           '#fff',
+                    whiteSpace:      'nowrap',
+                    pointerEvents:   'none',
+                    zIndex:          20,
+                    boxShadow:       isOn
+                      ? '0 0 8px 1px rgba(74,222,128,0.5)'
+                      : '0 0 8px 1px rgba(239,68,68,0.4)',
+                  }}
+                >
+                  {liveState}
+                </div>
+              )}
             </div>
           );
         })}

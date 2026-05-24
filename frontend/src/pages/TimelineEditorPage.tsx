@@ -22,6 +22,10 @@ export function TimelineEditorPage() {
   const [steps, setSteps]               = useState<TimelineStep[]>(existingTimeline?.steps ?? []);
   const [selectedComps, setSelectedComps] = useState<PlacedComponent[]>([]);
 
+  // Live playback state bubbled up from TrackCreatorTimeLine
+  const [liveIsPlaying,      setLiveIsPlaying]      = useState(false);
+  const [liveCompStates,     setLiveCompStates]      = useState<Map<string, string>>(new Map());
+
   const [pendingAction, setPendingAction] = useState<{ comp: PlacedComponent; action: string } | null>(null);
   const fileStore    = useRef<Map<string, File>>(new Map());
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -202,6 +206,8 @@ export function TimelineEditorPage() {
           scene={scene}
           selectedComps={selectedComps}
           onToggleComp={toggleCompSelection}
+          isPlaying={liveIsPlaying}
+          componentStates={liveCompStates}
         />
       </div>
 
@@ -217,6 +223,10 @@ export function TimelineEditorPage() {
         onRemoveStep={removeStep}
         onUpdateStep={updateStep}
         onBumpToNewTrack={bumpToNewTrack}
+        onPlaybackChange={(playing, states) => {
+          setLiveIsPlaying(playing);
+          setLiveCompStates(states);
+        }}
       />
 
       <input ref={fileInputRef} type="file" style={{ display: 'none' }} onChange={handleFileChosen} />
