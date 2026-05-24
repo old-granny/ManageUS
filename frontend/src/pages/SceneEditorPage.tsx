@@ -468,16 +468,8 @@ export function SceneEditorPage() {
         onMouseUp={handleMouseUpOrLeave}
         onMouseLeave={handleMouseUpOrLeave}
         onContextMenu={handleContextMenu}
-        className="relative overflow-hidden"
-        style={{
-          cursor: isPanning.current ? 'grabbing' : 'grab',
-          /* wood plank texture */
-          backgroundColor: '#c8a46e',
-          backgroundImage: `
-            repeating-linear-gradient(90deg, rgba(0,0,0,.07) 0px, transparent 1px, transparent 30px, rgba(0,0,0,.07) 31px),
-            repeating-linear-gradient(180deg, rgba(255,255,255,.04) 0px, transparent 5px, transparent 60px, rgba(255,255,255,.04) 61px)
-          `,
-        }}
+        className="relative overflow-hidden bg-slate-700"
+        style={{ cursor: isPanning.current ? 'grabbing' : 'grab' }}
       >
         {/* virtual infinite canvas */}
         <div
