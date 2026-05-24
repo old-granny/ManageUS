@@ -66,60 +66,60 @@ class Engine:
         try:
             tasks = sorted(conf.get_tasks(), key=lambda t: t.startTime)
 
-            runnerTime      = 0.0
+            TICK            = 0.05   # smaller tick → better timing resolution
             frameBuffSecond = 3.0
             task_cursor     = 0
 
-            frame, cnt          = self.arranged_task_frame(tasks[task_cursor:], runnerTime, frameBuffSecond)
-            next_recompute = runnerTime + frameBuffSecond
-            self.logger.debug(f"Frame: {frame}")
-            while not self.stopEvent.is_set():
+            frame, cnt     = self.arranged_task_frame(tasks, 0.0, frameBuffSecond)
+            next_recompute = frameBuffSecond
 
+            # Use a real clock so accumulated sleep error never drifts
+            start_real = time.perf_counter()
+
+            self.logger.debug(f"Initial frame: {list(frame.keys())}")
+
+            while not self.stopEvent.is_set():
+                runnerTime = time.perf_counter() - start_real
+
+                # 1. Fire every task whose scheduled time has arrived, then
+                #    remove it from the frame so it is never re-checked.
+                due = sorted(t for t in frame if runnerTime >= t)
+                for scheduled_time in due:
+                    for task in frame[scheduled_time]:
+                        if self.stopEvent.is_set():
+                            break
+                        if not task.is_running():
+                            self.logger.info(f"Starting task at t={scheduled_time:.3f}s")
+                            threading.Thread(target=task.run, daemon=True).start()
+                    del frame[scheduled_time]
+
+                # 2. Advance to the next frame window when the current one expires.
+                #    Always update next_recompute so we don't re-enter every tick.
                 if runnerTime >= next_recompute:
                     task_cursor += cnt
-
                     if task_cursor < len(tasks):
                         frame, cnt = self.arranged_task_frame(
-                            tasks[task_cursor:],
-                            runnerTime,
-                            frameBuffSecond
+                            tasks[task_cursor:], runnerTime, frameBuffSecond
                         )
+                    next_recompute = runnerTime + frameBuffSecond
 
-                        next_recompute = runnerTime + frameBuffSecond
-
-                # all tasks scheduled
-                if task_cursor >= len(tasks):
-                    all_done = all(not t.is_running() for t in tasks)
-
-                    if all_done:
+                # 3. Exit once every task has been scheduled and finished running.
+                if task_cursor >= len(tasks) and not frame:
+                    if all(not t.is_running() for t in tasks):
                         break
 
-                self.logger.debug(f"Frame: {frame} at {runnerTime}")
+                # stopEvent.wait() doubles as sleep AND instant wake-up on stop
+                self.stopEvent.wait(TICK)
 
-                EPSILON = 0.05
-
-                for scheduled_time in frame:
-                    if abs(runnerTime - scheduled_time) < EPSILON:
-                        for task in frame[scheduled_time]:
-                            self.logger.info("STARTING SCHEDULED TASK")
-                            if self.stopEvent.is_set():
-                                break
-
-                            if not task.is_running():
-                                threading.Thread(
-                                    target=task.run,
-                                    daemon=True
-                                ).start()
-                time.sleep(0.1)
-                runnerTime += 0.1
         except Exception as e:
             self.logger.error(f"Fail with the engine Sequence {e}")
             self.runnerExitCode = EngineCode.ENGINE_ERROR
+
         if not self.stopEvent.is_set():
             self.runnerExitCode = EngineCode.ENGINE_SUCCESS
         else:
             self.runnerExitCode = EngineCode.ENGINE_INTERRUPT
-        
+
         self.logger.info(f"EXIT CODE {self.runnerExitCode}")
 
 
