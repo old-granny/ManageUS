@@ -31,7 +31,12 @@ export function HeadbarTimeLine({ onSave, onGoToSceneEditor }: HeadbarTimeLinePr
         setSendState('idle');
       } else {
         setConnectionState('error');
-        setErrorMsg(`Connection failed (${res.status})`);
+        try {
+          const body = await res.json();
+          setErrorMsg(body.message ?? `Connection failed (${res.status})`);
+        } catch {
+          setErrorMsg(`Connection failed (${res.status})`);
+        }
       }
     } catch {
       setConnectionState('error');
@@ -49,7 +54,12 @@ export function HeadbarTimeLine({ onSave, onGoToSceneEditor }: HeadbarTimeLinePr
         setSequenceState('ready');
       } else {
         setSendState('error');
-        setErrorMsg(`Sent failed (${res.status})`);
+        try {
+          const body = await res.json();
+          setErrorMsg(body.message ?? `Sent failed (${res.status})`);
+        } catch {
+          setErrorMsg(`Sent failed (${res.status})`);
+        }
       }
     } catch {
       setSendState('error');

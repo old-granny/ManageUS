@@ -24,7 +24,7 @@ class SocketClient:
             return True
         
         try:
-            self.connection = await ws.connect(self.url)
+            self.connection = await ws.connect(self.url, max_size=None)
             self.logger.info("Connection ready")
             asyncio.create_task(self._send())
             asyncio.create_task(self._read())

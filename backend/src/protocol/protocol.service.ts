@@ -104,8 +104,14 @@ export class ProtocolService {
   }
 
   handleNack(client: WebSocket, cmd: CommandDto): void {
-    this.logger.log('HEARTBEAT received');
-    client.send(new CommandDto({ commandId: CommandId.ACK }).pack());
+    const session = this.sessions.get(client)!;
+    if (session.state === ESessionState.HELLO_SENT) {
+      // Device is already paired — NACK to HELLO means it's functional, treat as READY
+      session.state = ESessionState.READY;
+      this.logger.log('NACK to HELLO — device already paired, treating as READY');
+    } else {
+      this.logger.warn(`NACK received in state ${ESessionState[session.state]}`);
+    }
   }
 
   handleSequenceInfo(client: WebSocket, cmd: CommandDto): void {
