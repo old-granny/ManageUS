@@ -1,0 +1,177 @@
+import { useRef, useState, useEffect } from 'react';
+import { ComponentIcon }          from './ComponentIcon';
+import { COMPONENT_CONFIG, type PlacedComponent, type Scene } from '../types';
+import configData                  from '../config.json';
+import ResizableComponents         from './ResizableObjects.tsx';
+import NonResizableComponents      from './NonRezisableObjects';
+
+interface SceneCreatorTimeLineProps {
+  scene:          Scene | undefined;
+  selectedComp:   PlacedComponent | null;
+  onSelectComp:   (comp: PlacedComponent | null) => void;
+}
+
+export function SceneCreatorTimeLine({
+  scene,
+  selectedComp,
+  onSelectComp,
+}: SceneCreatorTimeLineProps) {
+  const [viewScale, setViewScale] = useState<number>(0.15);
+  const [viewPan,   setViewPan]   = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+
+  const sectionRef         = useRef<HTMLElement>(null);
+  const isViewPanning      = useRef<boolean>(false);
+  const startViewPanOffset = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const viewPanStartPos    = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const didPanView         = useRef<boolean>(false);
+
+  // Fit the viewport to the component bounding box on first render
+  useEffect(() => {
+    if (!sectionRef.current) return;
+    const rect = sectionRef.current.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) return;
+
+    const comps = scene?.components ?? [];
+    let minX: number, minY: number, maxX: number, maxY: number;
+
+    if (comps.length === 0) {
+      minX = 0; minY = 0;
+      maxX = configData.VIRTUAL_STAGE_WIDTH;
+      maxY = configData.VIRTUAL_STAGE_HEIGHT;
+    } else {
+      minX = Infinity; minY = Infinity; maxX = -Infinity; maxY = -Infinity;
+      for (const comp of comps) {
+        const w = comp.width  ?? configData.DEFAULT_COMP_W;
+        const h = comp.height ?? configData.DEFAULT_COMP_H;
+        minX = Math.min(minX, comp.x);
+        minY = Math.min(minY, comp.y);
+        maxX = Math.max(maxX, comp.x + w);
+        maxY = Math.max(maxY, comp.y + h);
+      }
+    }
+
+    const PADDING  = 120;
+    const contentW = (maxX - minX) + PADDING * 2;
+    const contentH = (maxY - minY) + PADDING * 2;
+    const fitScale = Math.min(rect.width / contentW, rect.height / contentH);
+    const cx = (minX + maxX) / 2;
+    const cy = (minY + maxY) / 2;
+
+    setViewScale(fitScale);
+    setViewPan({
+      x: rect.width  / 2 - cx * fitScale,
+      y: rect.height / 2 - cy * fitScale,
+    });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function handleWheel(e: React.WheelEvent<HTMLElement>) {
+    e.preventDefault();
+    const factor = 0.08;
+    setViewScale(prev => Math.min(4, Math.max(0.05, prev + (e.deltaY < 0 ? factor : -factor))));
+  }
+
+  function handleMouseDown(e: React.MouseEvent<HTMLElement>) {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    isViewPanning.current      = true;
+    didPanView.current         = false;
+    viewPanStartPos.current    = { x: e.clientX, y: e.clientY };
+    startViewPanOffset.current = { x: e.clientX - viewPan.x, y: e.clientY - viewPan.y };
+  }
+
+  function handleMouseMove(e: React.MouseEvent<HTMLElement>) {
+    if (!isViewPanning.current) return;
+    const dx = Math.abs(e.clientX - viewPanStartPos.current.x);
+    const dy = Math.abs(e.clientY - viewPanStartPos.current.y);
+    if (!didPanView.current && (dx > 3 || dy > 3)) didPanView.current = true;
+    if (didPanView.current) {
+      setViewPan({
+        x: e.clientX - startViewPanOffset.current.x,
+        y: e.clientY - startViewPanOffset.current.y,
+      });
+    }
+  }
+
+  function handleMouseUp() {
+    isViewPanning.current = false;
+  }
+
+  return (
+    <section
+      className="stage-view overflow-hidden"
+      ref={sectionRef}
+      onWheel={handleWheel}
+      onMouseDown={handleMouseDown}
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
+      onMouseLeave={handleMouseUp}
+      style={{
+        cursor:     isViewPanning.current && didPanView.current ? 'grabbing' : 'grab',
+        userSelect: 'none',
+      }}
+    >
+      {/* Virtual canvas — same dimensions as the scene editor */}
+      <div
+        style={{
+          position:        'absolute',
+          top:             0,
+          left:            0,
+          width:           `${configData.VIRTUAL_STAGE_WIDTH}px`,
+          height:          `${configData.VIRTUAL_STAGE_HEIGHT}px`,
+          transform:       `translate(${viewPan.x}px, ${viewPan.y}px) scale(${viewScale})`,
+          transformOrigin: '0 0',
+          backgroundColor: '#475569',
+        }}
+      >
+        {(!scene || scene.components.length === 0) && (
+          <p className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-white/30 text-2xl italic pointer-events-none select-none">
+            Scène vide — retourne dans l'éditeur de scène
+          </p>
+        )}
+
+        {scene?.components.map(comp => {
+          const compW       = comp.width  ?? 80;
+          const compH       = comp.height ?? 80;
+          const isResizable = COMPONENT_CONFIG[comp.kind].isResizable;
+          const isSelected  = selectedComp?.id === comp.id;
+
+          return (
+            <div
+              key={comp.id}
+              style={{
+                position:   'absolute',
+                left:       `${comp.x}px`,
+                top:        `${comp.y}px`,
+                width:      `${compW}px`,
+                height:     `${compH}px`,
+                borderRadius: 4,
+                border:     isSelected ? '2px solid #22c55e' : '2px solid transparent',
+                boxShadow:  isSelected ? '0 0 0 3px rgba(34,197,94,0.3)' : undefined,
+                cursor:     'pointer',
+                overflow:   'visible',
+                transition: 'border-color 0.12s',
+              }}
+              onClick={() => {
+                if (didPanView.current) return;
+                onSelectComp(selectedComp?.id === comp.id ? null : comp);
+              }}
+            >
+              {(() => {
+                const Renderer = isResizable
+                  ? ResizableComponents[comp.kind]
+                  : NonResizableComponents[comp.kind];
+                if (Renderer) return <Renderer comp={comp} onStartDrag={() => {}} showName={true} />;
+                return <ComponentIcon kind={comp.kind} size={Math.round(Math.min(compW, compH) * 0.7)} />;
+              })()}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Zoom indicator */}
+      <div className="absolute bottom-2 right-3 bg-black/40 text-white/60 text-[11px] px-2 py-0.5 rounded pointer-events-none select-none">
+        {Math.round(viewScale * 100)}%
+      </div>
+    </section>
+  );
+}

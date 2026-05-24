@@ -121,12 +121,13 @@ export type TimelineStep =
   | {
       id: string;
       type: 'action';
+      trackId?: string;
       componentId: string;
       action: string;
       /** Path of the attached file inside the ZIP (e.g. "images/comp-123.jpg"). Undefined for actions that need no file. */
       attachedFileName?: string;
     }
-  | { id: string; type: 'wait'; waitMs: number };
+  | { id: string; type: 'wait'; trackId?: string; waitMs: number };
 
 /** A timeline is an ordered sequence of steps bound to a specific scene */
 export interface Timeline {

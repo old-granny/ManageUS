@@ -1,148 +1,54 @@
-import { useRef, useState, useEffect, type ChangeEvent } from 'react';
-import { ComponentIcon } from '../components/ComponentIcon';
-import { useAppStore }    from '../store/AppContext';
+﻿import { useRef, useState, type ChangeEvent } from 'react';
+import { useAppStore } from '../store/AppContext';
 import {
   ACTIONS_REQUIRING_FILE,
-  KIND_ACTIONS,
-  KIND_LABELS,
   type PlacedComponent,
   type TimelineStep,
   type Timeline,
 } from '../types';
+import { ObjectCreatorTimeLine } from '../components/ObjectCreatorTimeLine';
+import { SceneCreatorTimeLine }  from '../components/SceneCreatorTimeLine';
+import { TrackCreatorTimeLine }  from '../components/TrackCreatorTimeLine';
 
 export function TimelineEditorPage() {
   const { state, dispatch } = useAppStore();
 
-  const scene = state.scenes.find(s => s.id === state.activeSceneId);
+  const scene            = state.scenes.find(s => s.id === state.activeSceneId);
   const existingTimeline = state.timelines.find(t => t.id === state.activeTimelineId);
 
-  const [timelineName, setTimelineName] = useState<string>(existingTimeline?.name ?? 'Ma timeline');
-  const [steps, setSteps] = useState<TimelineStep[]>(existingTimeline?.steps ?? []);
+  // â”€â”€ Shared state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  const [timelineName] = useState<string>(existingTimeline?.name ?? 'Ma timeline');
+  const [steps, setSteps]               = useState<TimelineStep[]>(existingTimeline?.steps ?? []);
   const [selectedComp, setSelectedComp] = useState<PlacedComponent | null>(null);
 
-  const [showWaitInput, setShowWaitInput] = useState<boolean>(false);
-  const [waitSeconds, setWaitSeconds] = useState<number>(5);
-
   const [pendingAction, setPendingAction] = useState<{ comp: PlacedComponent; action: string } | null>(null);
-
-  const fileStore = useRef<Map<string, File>>(new Map());
+  const fileStore    = useRef<Map<string, File>>(new Map());
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [isPlaying, setIsPlaying] = useState<boolean>(false);
-  const [currentTime, setCurrentTime] = useState<number>(0);
+  const [tracks, setTracks]               = useState<{ id: string; name: string }[]>([{ id: 'track-1', name: 'Track 1' }]);
+  const [selectedTrackId, setSelectedTrackId] = useState<string>('track-1');
 
-  const scrollAreaRef = useRef<HTMLDivElement>(null);
-  const [isDragging, setIsDragging] = useState(false);
-
-  // Gestion dynamique des pistes
-  const [tracks, setTracks] = useState<{ id: string; name: string }[]>([
-    { id: 'track-1', name: 'Track 1' },
-  ]);
-
-  // Génération des graduations (ex: de 0.0s à 10.0s par pas de 0.2s)
-  const graduations = Array.from({ length: 51 }, (_, i) => (i * 0.2).toFixed(1) + 's');
-
+  // â”€â”€ Track management â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   function addTrack() {
     const newId = `track-${Date.now()}`;
     setTracks(prev => [...prev, { id: newId, name: `Track ${prev.length + 1}` }]);
   }
 
   function removeTrack(id: string) {
-    setTracks(prev => prev.filter(t => t.id !== id));
+    const remaining = tracks.filter(t => t.id !== id);
+    if (remaining.length > 0) {
+      const fallbackId = remaining[0].id;
+      setSteps(prev => prev.map(s => s.trackId === id ? { ...s, trackId: fallbackId } : s));
+    }
+    setTracks(remaining);
+    if (selectedTrackId === id && remaining.length > 0) setSelectedTrackId(remaining[0].id);
   }
 
-  // Animation fluide du curseur de lecture (avec arrêt à la fin)
-  useEffect(() => {
-    let animationFrame: number;
-    let lastTime = performance.now();
-    const MAX_TIME = 10; // La fin de la timeline (10 secondes)
+  function moveStepToTrack(stepId: string, toTrackId: string) {
+    setSteps(prev => prev.map(s => s.id === stepId ? { ...s, trackId: toTrackId } : s));
+  }
 
-    function updatePlayhead(time: number) {
-      if (!isPlaying) return;
-      const delta = (time - lastTime) / 1000;
-      lastTime = time;
-      
-      setCurrentTime(prev => {
-        const nextTime = prev + delta;
-        // Si on atteint ou dépasse la fin, on arrête la lecture et on bloque à 10s
-        if (nextTime >= MAX_TIME) {
-          setIsPlaying(false);
-          return MAX_TIME;
-        }
-        return nextTime;
-      });
-      animationFrame = requestAnimationFrame(updatePlayhead);
-    }
-
-    if (isPlaying) {
-      lastTime = performance.now();
-      animationFrame = requestAnimationFrame(updatePlayhead);
-    }
-
-    return () => cancelAnimationFrame(animationFrame);
-  }, [isPlaying]);
-
-
-  // Gérer le déplacement de la souris (avec blocage de la sélection de texte)
-  useEffect(() => {
-    // Si on ne glisse pas, on s'assure que le texte est sélectionnable
-    if (!isDragging) {
-      document.body.style.userSelect = ''; 
-      return;
-    }
-
-    const MAX_TIME = 10; // La fin de la timeline (10 secondes)
-
-    // Empêche la sélection du texte pendant qu'on glisse le curseur
-    document.body.style.userSelect = 'none';
-
-    function handleMouseMove(e: MouseEvent) {
-      if (!scrollAreaRef.current) return;
-      const rect = scrollAreaRef.current.getBoundingClientRect();
-      
-      let newX = e.clientX - rect.left + scrollAreaRef.current.scrollLeft;
-      if (newX < 0) newX = 0;
-      
-      let newTime = newX / 350;
-      if (newTime > MAX_TIME) newTime = MAX_TIME; // Bloque le curseur à la fin
-      
-      setCurrentTime(newTime);
-    }
-
-    function handleMouseUp() {
-      setIsDragging(false);
-    }
-
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseup', handleMouseUp);
-
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
-      document.body.style.userSelect = ''; // Sécurité au démontage
-    };
-  }, [isDragging]);
-
-
-  // Auto-scroll de la timeline pour suivre le curseur
-  useEffect(() => {
-    if (!scrollAreaRef.current) return;
-    
-    const scrollArea = scrollAreaRef.current;
-    const playheadX = currentTime * 350;
-    const visibleLeft = scrollArea.scrollLeft;
-    const visibleRight = visibleLeft + scrollArea.clientWidth;
-
-    // Si le curseur s'approche du bord droit (marge de 50px pour voir ce qui arrive)
-    if (playheadX > visibleRight - 50) {
-      scrollArea.scrollLeft = playheadX - scrollArea.clientWidth + 50;
-    } 
-    // Si on ramène le curseur manuellement vers la gauche
-    else if (playheadX < visibleLeft + 50 && visibleLeft > 0) {
-      scrollArea.scrollLeft = Math.max(0, playheadX - 50);
-    }
-  }, [currentTime]);
-
+  // â”€â”€ Step management â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   function addActionStep(action: string) {
     if (!selectedComp) return;
 
@@ -160,6 +66,7 @@ export function TimelineEditorPage() {
     const step: TimelineStep = {
       id: `step-${Date.now()}`,
       type: 'action',
+      trackId: selectedTrackId,
       componentId: selectedComp.id,
       action,
     };
@@ -172,16 +79,16 @@ export function TimelineEditorPage() {
     if (!file || !pendingAction) return;
 
     const { comp, action } = pendingAction;
-    const folder = ACTIONS_REQUIRING_FILE[action].folder;
-    const ext = file.name.split('.').pop() ?? 'bin';
+    const folder   = ACTIONS_REQUIRING_FILE[action].folder;
+    const ext      = file.name.split('.').pop() ?? 'bin';
     const fileName = `${folder}/${comp.id}-${Date.now()}.${ext}`;
+    const stepId   = `step-${Date.now()}`;
 
-    const stepId = `step-${Date.now()}`;
     fileStore.current.set(stepId, file);
-
     const step: TimelineStep = {
       id: stepId,
       type: 'action',
+      trackId: selectedTrackId,
       componentId: comp.id,
       action,
       attachedFileName: fileName,
@@ -191,24 +98,15 @@ export function TimelineEditorPage() {
     e.target.value = '';
   }
 
-  function addWaitStep() {
-    const step: TimelineStep = {
-      id: `step-${Date.now()}`,
-      type: 'wait',
-      waitMs: waitSeconds * 1000,
-    };
-    setSteps(prev => [...prev, step]);
-    setShowWaitInput(false);
-  }
-
   function removeStep(id: string) {
     setSteps(prev => prev.filter(s => s.id !== id));
   }
 
+  // â”€â”€ Save / Export â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   function buildTimeline(): Timeline {
     return {
-      id: existingTimeline?.id ?? `timeline-${Date.now()}`,
-      name: timelineName,
+      id:      existingTimeline?.id ?? `timeline-${Date.now()}`,
+      name:    timelineName,
       sceneId: scene?.id ?? '',
       steps,
     };
@@ -218,218 +116,83 @@ export function TimelineEditorPage() {
     const timeline = buildTimeline();
     dispatch({ type: 'SAVE_TIMELINE', timeline });
     dispatch({ type: 'SET_ACTIVE_TIMELINE', id: timeline.id });
-    alert(`✅ Timeline "${timelineName}" sauvegardée !`);
+    alert(`âœ… Timeline "${timelineName}" sauvegardÃ©e !`);
   }
 
   async function handleSendToPi() {
-    if (!scene) {
-      alert("Aucune scène chargée. Retourne dans l'éditeur de scène.");
-      return;
-    }
+    if (!scene) { alert("Aucune scÃ¨ne chargÃ©e."); return; }
 
     const timeline = buildTimeline();
-
     try {
       const { default: JSZip } = await import('jszip');
       const zip = new JSZip();
-
       zip.file('timeline.json', JSON.stringify({ scene, timeline }, null, 2));
-
       for (const step of timeline.steps) {
         if (step.type === 'action' && step.attachedFileName) {
-          const file = fileStore.current.get(step.id);
-          if (file) {
-            zip.file(step.attachedFileName, file);
-          }
+          const f = fileStore.current.get(step.id);
+          if (f) zip.file(step.attachedFileName, f);
         }
       }
-
       const blob = await zip.generateAsync({ type: 'blob' });
       const form = new FormData();
       form.append('file', blob, 'timeline.zip');
-
-      const res = await fetch('http://localhost:3000/timeline/send', {
-        method: 'POST',
-        body: form,
-      });
-
-      if (res.ok) {
-        alert('🍓 Timeline envoyée au Raspberry Pi !');
-      } else {
-        alert(`Erreur ${res.status} du serveur.`);
-      }
+      const res = await fetch('http://localhost:3000/timeline/send', { method: 'POST', body: form });
+      if (res.ok) alert('ðŸ“ Timeline envoyÃ©e au Raspberry Pi !');
+      else alert(`Erreur ${res.status} du serveur.`);
     } catch (err) {
       console.error(err);
-      alert("Impossible d'envoyer la timeline.\nVérifie que le serveur NestJS est démarré.");
+      alert("Impossible d'envoyer la timeline.\nVÃ©rifie que le serveur NestJS est dÃ©marrÃ©.");
     }
-  }
-
-  function stepLabel(step: TimelineStep): string {
-    if (step.type === 'wait') {
-      return `⏱ ${step.waitMs / 1000}s`;
-    }
-    const comp = scene?.components.find(c => c.id === step.componentId);
-    const name = comp ? comp.name : `ID:${step.componentId}`;
-    return `${name} → ${step.action}`;
   }
 
   return (
     <div className="timeline-editor">
-      
-      {/* ── Top bar ─────────────────────────────── */}
+
+      {/* Top bar */}
       <header className="scene-topbar">
         <div className="topbar-links">
-          <button className="topbar-link" onClick={handleSave}>Import</button>
-          <button className="topbar-link" onClick={handleSendToPi}>Export</button>
-          <button 
+          <button className="topbar-link" onClick={handleSave}>Sauvegarder</button>
+          <button className="topbar-link" onClick={handleSendToPi}>Envoyer au Pi</button>
+          <button
             className="topbar-link"
             onClick={() => dispatch({ type: 'SET_PAGE', page: 'scene-editor' })}
           >
-            Modify scene
+            Modifier la scene
           </button>
         </div>
-        <div className="topbar-avatar">
-          {/* Espace pour l'icône/avatar en haut à droite */}
-        </div>
+        <div className="topbar-avatar" />
       </header>
 
-      {/* ── Middle Section: Sidebar + Stage ─────────────────────────────── */}
+      {/* Middle: object creator + scene viewer */}
       <div className="timeline-middle">
-        
-        {/* Panneau latéral gauche */}
-        <aside className="component-creator-panel">
-          <div className="creator-card">
-            <h3>Component Creator</h3>
-            {selectedComp ? (
-              <div className="action-picker-inline">
-                <p><strong>{selectedComp.name}</strong></p>
-                <div className="action-btns">
-                  {KIND_ACTIONS[selectedComp.kind].map(action => (
-                    <button key={action} className="btn btn-action" onClick={() => addActionStep(action)}>
-                      {action}
-                    </button>
-                  ))}
-                  <button className="btn btn-ghost" onClick={() => setSelectedComp(null)}>Annuler</button>
-                </div>
-              </div>
-            ) : (
-              <p className="subtitle">Select an object in<br/>the scene</p>
-            )}
-          </div>
-        </aside>
-
-        {/* Zone de la scène centrale */}
-        <section className="stage-view">
-          <div className="stage-frame">
-            
-            {/* Lumières décoratives autour de la bordure bleue */}
-            <div className="border-lights top">
-              {Array.from({ length: 6 }).map((_, i) => <div key={`t-${i}`} className="b-light" />)}
-            </div>
-            <div className="border-lights bottom">
-              {Array.from({ length: 10 }).map((_, i) => <div key={`b-${i}`} className="b-light" />)}
-            </div>
-            <div className="border-lights left">
-              {Array.from({ length: 4 }).map((_, i) => <div key={`l-${i}`} className="b-light" />)}
-            </div>
-            <div className="border-lights right">
-              {Array.from({ length: 4 }).map((_, i) => <div key={`r-${i}`} className="b-light" />)}
-            </div>
-
-            {/* Le plancher gris de la scène au centre */}
-            <div className="stage-floor">
-              {(!scene || scene.components.length === 0) && (
-                <p className="stage-empty">Scène vide.</p>
-              )}
-
-              {scene?.components.map(comp => (
-                <button
-                  key={comp.id}
-                  className={`stage-comp-btn ${selectedComp?.id === comp.id ? 'selected' : ''}`}
-                  style={{ left: `${comp.x}%`, top: `${comp.y}%` }}
-                  onClick={() => setSelectedComp(selectedComp?.id === comp.id ? null : comp)}
-                >
-                  <ComponentIcon kind={comp.kind} size={40} />
-                </button>
-              ))}
-            </div>
-          </div>
-        </section>
+        <ObjectCreatorTimeLine
+          selectedComp={selectedComp}
+          activeTrackName={tracks.find(t => t.id === selectedTrackId)?.name ?? 'â€”'}
+          onAddAction={addActionStep}
+          onCancel={() => setSelectedComp(null)}
+        />
+        <SceneCreatorTimeLine
+          scene={scene}
+          selectedComp={selectedComp}
+          onSelectComp={setSelectedComp}
+        />
       </div>
 
-      {/* ── Timeline Panel ──────────────────────────────────────────────── */}
-      <section className="timeline-panel">
-        <div className="playback-controls">
-          <button className="ctrl-btn play-btn" onClick={() => setIsPlaying(true)}>▶</button>
-          <button className="ctrl-btn pause-btn" onClick={() => setIsPlaying(false)}>⏸</button>
-          <button className="ctrl-btn stop-btn" onClick={() => { setIsPlaying(false); setCurrentTime(0); }}>⏹</button>
-          
-          <button className="btn btn-outline btn-add-track" onClick={addTrack}>
-            ＋ Add Track
-          </button>
-        </div>
-        
-        <div className="timeline-grid-container">
-          
-          {/* Colonne de gauche : Entêtes des pistes (Fixe) */}
-          <div className="timeline-labels-column">
-            <div className="ruler-corner-cell">Temps</div>
-            {tracks.map(track => (
-              <div key={track.id} className="track-label-cell">
-                <span>{track.name}</span>
-                <button className="track-del-btn" onClick={() => removeTrack(track.id)}>×</button>
-              </div>
-            ))}
-          </div>
-
-          {/* Zone de droite : Échelle de temps et blocs (Scrollable) */}
-          <div className="timeline-scrollable-area" ref={scrollAreaRef} style={{ position: 'relative' }}>
-            {/* Le curseur (Playhead) interactif */}
-            <div 
-              className="playhead-line" 
-              style={{ left: `${currentTime * 350}px` }} 
-              onMouseDown={() => {
-                setIsDragging(true);
-                setIsPlaying(false); // Met en pause quand on attrape le curseur
-              }}
-            />
-            
-            {/* Règle graduée (0.x secondes) */}
-            <div className="timeline-ruler-row">
-              {graduations.map((time, idx) => (
-                <div key={idx} className="ruler-tick-cell">
-                  <span className="tick-text">{time}</span>
-                  <div className="tick-mark"></div>
-                </div>
-              ))}
-            </div>
-            
-            {/* Pistes de la timeline */}
-            {tracks.map((track, trackIdx) => (
-              <div key={track.id} className="timeline-track-data-row">
-                {/* Exemple : on place les actions sur la première piste */}
-                {trackIdx === 0 ? (
-                  steps.map((step) => (
-                    <div key={step.id} className="track-block">
-                      <span>{stepLabel(step)}</span>
-                      <button className="step-del" onClick={() => removeStep(step.id)}>×</button>
-                    </div>
-                  ))
-                ) : (
-                  <span className="track-empty-hint"></span>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <input
-        ref={fileInputRef}
-        type="file"
-        style={{ display: 'none' }}
-        onChange={handleFileChosen}
+      {/* Bottom: timeline tracks */}
+      <TrackCreatorTimeLine
+        tracks={tracks}
+        selectedTrackId={selectedTrackId}
+        steps={steps}
+        sceneComponents={scene?.components ?? []}
+        onSelectTrack={setSelectedTrackId}
+        onAddTrack={addTrack}
+        onRemoveTrack={removeTrack}
+        onMoveStep={moveStepToTrack}
+        onRemoveStep={removeStep}
       />
+
+      {/* Hidden file input for media attachments */}
+      <input ref={fileInputRef} type="file" style={{ display: 'none' }} onChange={handleFileChosen} />
     </div>
   );
 }
