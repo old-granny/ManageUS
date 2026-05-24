@@ -5,5 +5,5 @@
     "DEFAULT_COMP_H": 80,
     "MIN_COMP_SIZE": 40,
     "MAX_LED": 4,
-    "HOSTNAME" : "https://manageUS-api.marc-dev"
+    "HOSTNAME" : "http://10.168.70.217:3000"
 }

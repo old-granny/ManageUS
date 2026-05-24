@@ -86,6 +86,7 @@ class _PostsScreenState extends State<PostsScreen> {
             child: ElevatedButton(
               onPressed: () {
                 // your start action here
+                ApiService.post("/manager/start", {});
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.green.shade600,
