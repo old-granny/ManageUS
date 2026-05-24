@@ -14,11 +14,11 @@ class FireTask(Task):
             id = self.args.get("ID")
 
             match id:
-                case "FIRE_1":
+                case "1":
                     gpio.output(gpio.FIRE_1, gpio.HIGH)
-                case "FIRE_2":
+                case "2":
                     gpio.output(gpio.FIRE_2, gpio.HIGH)
-                case "FIRE_3":
+                case "3":
                     gpio.output(gpio.FIRE_3, gpio.HIGH)
                 case _:
                     pass

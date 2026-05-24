@@ -83,6 +83,9 @@ export async function exportTimelineZip(
   const sequence: SequenceEntry[] = [];
 
   // Process every step – startOffset is now the absolute time position
+  zip.folder(`config/assets/`);
+
+  
   for (const step of timeline.steps) {
     if (step.type === 'wait') continue;   // wait steps are timing gaps, no device task
 
@@ -99,7 +102,7 @@ export async function exportTimelineZip(
       expected_end_time: parseFloat(endTime.toFixed(3)),
       args,
     });
-
+    
     // Add the attached media file to the ZIP under config/assets/
     if (step.attachedFileName) {
       const file = fileStore.get(step.id);
