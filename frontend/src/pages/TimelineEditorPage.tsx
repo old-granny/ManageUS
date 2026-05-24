@@ -10,6 +10,7 @@ import { ObjectCreatorTimeLine } from '../components/Timeline/ObjectCreatorTimeL
 import { SceneCreatorTimeLine }  from '../components/Timeline/SceneCreatorTimeLine';
 import { TrackCreatorTimeLine }  from '../components/Timeline/TrackCreatorTimeLine';
 import { HeadbarTimeLine } from '../components/Timeline/headbar';
+import { exportTimelineZip } from '../utils/exportZip';
 
 export function TimelineEditorPage() {
   const { state, dispatch } = useAppStore();
@@ -48,6 +49,19 @@ export function TimelineEditorPage() {
     setSteps(prev => prev.map(s => s.id === stepId ? { ...s, trackId: toTrackId } as TimelineStep : s));
   }
 
+  function bumpToNewTrack(stepId: string) {
+    const newId = `track-${Date.now()}`;
+    setTracks(prev => [...prev, { id: newId, name: `Track ${prev.length + 1}` }]);
+    setSteps(prev => prev.map(s => s.id === stepId ? { ...s, trackId: newId } as TimelineStep : s));
+  }
+
+  /** Compute the end-time of the last step in a given track (to place new steps after it) */
+  function nextOffset(trackId: string): number {
+    return steps
+      .filter(s => (s.trackId ?? 'track-1') === trackId)
+      .reduce((max, s) => Math.max(max, (s.startOffset ?? 0) + (s.duration ?? 1)), 0);
+  }
+
   function addActionStep(action: string) {
     if (!selectedComp) return;
 
@@ -68,6 +82,7 @@ export function TimelineEditorPage() {
       trackId: selectedTrackId,
       componentId: selectedComp.id,
       action,
+      startOffset: nextOffset(selectedTrackId),
     };
     setSteps(prev => [...prev, step]);
     setSelectedComp(null);
@@ -95,6 +110,7 @@ export function TimelineEditorPage() {
       componentId: comp.id,
       action,
       attachedFileName: fileName,
+      startOffset: nextOffset(selectedTrackId),
     };
     setSteps(prev => [...prev, step]);
     setPendingAction(null);
@@ -118,7 +134,8 @@ export function TimelineEditorPage() {
     const timeline = buildTimeline();
     dispatch({ type: 'SAVE_TIMELINE', timeline });
     dispatch({ type: 'SET_ACTIVE_TIMELINE', id: timeline.id });
-    alert(`✅ Timeline "${timelineName}" sauvegardée !`);
+    exportTimelineZip(timeline, scene, fileStore.current, timelineName)
+      .catch(err => console.error('ZIP export failed:', err));
   }
 
 
@@ -152,8 +169,9 @@ export function TimelineEditorPage() {
         onMoveStep={moveStepToTrack}
         onRemoveStep={removeStep}
         onUpdateStep={updateStep}
+        onBumpToNewTrack={bumpToNewTrack}
       />
-      
+
       <input ref={fileInputRef} type="file" style={{ display: 'none' }} onChange={handleFileChosen} />
     </div>
   );

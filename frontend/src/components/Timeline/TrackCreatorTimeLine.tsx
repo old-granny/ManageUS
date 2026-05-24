@@ -4,19 +4,22 @@ import { type PlacedComponent, type TimelineStep } from '../../types';
 interface Track { id: string; name: string; }
 
 interface TrackCreatorTimeLineProps {
-  tracks:           Track[];
-  selectedTrackId:  string;
-  steps:            TimelineStep[];
-  sceneComponents:  PlacedComponent[];
-  onSelectTrack:    (id: string) => void;
-  onAddTrack:       () => void;
-  onRemoveTrack:    (id: string) => void;
-  onMoveStep:       (stepId: string, toTrackId: string) => void;
-  onRemoveStep:     (id: string) => void;
-  onUpdateStep:     (id: string, updates: Record<string, any>) => void; 
+  tracks:             Track[];
+  selectedTrackId:    string;
+  steps:              TimelineStep[];
+  sceneComponents:    PlacedComponent[];
+  onSelectTrack:      (id: string) => void;
+  onAddTrack:         () => void;
+  onRemoveTrack:      (id: string) => void;
+  onMoveStep:         (stepId: string, toTrackId: string) => void;
+  onRemoveStep:       (id: string) => void;
+  onUpdateStep:       (id: string, updates: Record<string, any>) => void;
+  onBumpToNewTrack:   (stepId: string) => void;
 }
 
 const PIXELS_PER_SECOND = 80;
+const TRACK_HEIGHT      = 46;   // must match CSS .timeline-track-data-row height
+const RULER_HEIGHT      = 30;   // must match CSS .timeline-ruler-row height
 
 export function TrackCreatorTimeLine({
   tracks,
@@ -26,51 +29,59 @@ export function TrackCreatorTimeLine({
   onSelectTrack,
   onAddTrack,
   onRemoveTrack,
-  onMoveStep,
   onRemoveStep,
-  onUpdateStep
+  onUpdateStep,
+  onBumpToNewTrack,
 }: TrackCreatorTimeLineProps) {
   const [isPlaying,   setIsPlaying]   = useState<boolean>(false);
   const [currentTime, setCurrentTime] = useState<number>(0);
-  const [isDragging,  setIsDragging]  = useState<boolean>(false);
+  const [isDragging,  setIsDragging]  = useState<boolean>(false);   // playhead drag
 
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const labelsAreaRef = useRef<HTMLDivElement>(null);
-  
-  const [resizingStep, setResizingStep] = useState<{ 
-    id: string; 
-    startWidth: number; 
-    startX: number; 
+
+  // ── Resize state ───────────────────────────────────────────────────────────
+  const [resizingStep, setResizingStep] = useState<{
+    id:              string;
+    startWidth:      number;
+    startOffset:     number;
+    startX:          number;
     startScrollLeft: number;
-    direction: 'left' | 'right'; 
+    direction:       'left' | 'right';
   } | null>(null);
 
-  const currentMouseX = useRef<number | null>(null);
-  const onUpdateStepRef = useRef(onUpdateStep);
-  
-  useEffect(() => {
-    onUpdateStepRef.current = onUpdateStep;
-  }, [onUpdateStep]);
+  // ── Free-placement drag state ──────────────────────────────────────────────
+  const [movingBlock, setMovingBlock] = useState<{
+    id:              string;
+    origOffset:      number;
+    startX:          number;
+    startScrollLeft: number;
+  } | null>(null);
 
-  // ── CALCUL DYNAMIQUE DU TEMPS MAXIMUM ET DE L'ÉCHELLE ─────────────────────
-  const maxTrackTime = tracks.reduce((max, track) => {
-    const trackSteps = steps.filter(s =>
-      s.trackId ? s.trackId === track.id : track.id === tracks[0]?.id
-    );
-    const totalDuration = trackSteps.reduce((acc, step) => acc + (step.duration || 1), 0);
-    const gapsDuration = Math.max(0, trackSteps.length - 1) * (8 / PIXELS_PER_SECOND);
-    return Math.max(max, totalDuration + gapsDuration);
-  }, 0);
+  // ── Stable refs ───────────────────────────────────────────────────────────
+  const currentMouseX       = useRef<number | null>(null);
+  const currentMouseY       = useRef<number | null>(null);
+  const onUpdateStepRef     = useRef(onUpdateStep);
+  const onBumpToNewTrackRef = useRef(onBumpToNewTrack);
+  const stepsRef            = useRef(steps);
+  const tracksRef           = useRef(tracks);
 
-  // AJOUT/RÉDUCTION PAR BOND DE 10 SECONDES (Si > 49, on arrondit à la dizaine supérieure)
-  const MAX_TIME = maxTrackTime > 49 ? (Math.floor(maxTrackTime / 10) * 10) + 10 : 59;
+  useEffect(() => { onUpdateStepRef.current     = onUpdateStep;     }, [onUpdateStep]);
+  useEffect(() => { onBumpToNewTrackRef.current  = onBumpToNewTrack; }, [onBumpToNewTrack]);
+  useEffect(() => { stepsRef.current             = steps;            }, [steps]);
+  useEffect(() => { tracksRef.current            = tracks;           }, [tracks]);
+
+  // ── Timeline scale ─────────────────────────────────────────────────────────
+  const maxTrackTime = steps.reduce((max, s) =>
+    Math.max(max, (s.startOffset ?? 0) + (s.duration ?? 1)),
+  0);
+
+  const MAX_TIME       = maxTrackTime > 49 ? (Math.floor(maxTrackTime / 10) * 10) + 10 : 59;
   const isMinutesScale = MAX_TIME > 59;
+  const totalWidth     = MAX_TIME * PIXELS_PER_SECOND;
 
-  const tickInterval = 1; 
   const graduations: number[] = [];
-  for (let t = 0; t <= MAX_TIME; t += tickInterval) {
-    graduations.push(t);
-  }
+  for (let t = 0; t <= MAX_TIME; t++) graduations.push(t);
 
   function formatTick(t: number) {
     if (isMinutesScale) {
@@ -78,27 +89,46 @@ export function TrackCreatorTimeLine({
       const s = Math.floor(t % 60);
       return `${m}:${s.toString().padStart(2, '0')}`;
     }
-    return t + 's';
+    return `${t}s`;
   }
 
-  // ── SYNCHRONISATION DU SCROLL ─────────────────────────────────────────────
+  // ── Scroll sync (vertical) ────────────────────────────────────────────────
   const handleScrollLeft = (e: React.UIEvent<HTMLDivElement>) => {
-    if (scrollAreaRef.current && scrollAreaRef.current.scrollTop !== e.currentTarget.scrollTop) {
+    if (scrollAreaRef.current && scrollAreaRef.current.scrollTop !== e.currentTarget.scrollTop)
       scrollAreaRef.current.scrollTop = e.currentTarget.scrollTop;
-    }
   };
-
   const handleScrollRight = (e: React.UIEvent<HTMLDivElement>) => {
-    if (labelsAreaRef.current && labelsAreaRef.current.scrollTop !== e.currentTarget.scrollTop) {
+    if (labelsAreaRef.current && labelsAreaRef.current.scrollTop !== e.currentTarget.scrollTop)
       labelsAreaRef.current.scrollTop = e.currentTarget.scrollTop;
-    }
   };
 
-  // ── REDIMENSIONNEMENT AVEC AUTO-SCROLL CONTINU ────────────────────────────
+  // ── Overlap check: bump overlapping neighbours of a resized step ──────────
+  function bumpOverlaps(resizedId: string) {
+    const resized = stepsRef.current.find(s => s.id === resizedId);
+    if (!resized) return;
+    const newStart = resized.startOffset ?? 0;
+    const newEnd   = newStart + (resized.duration ?? 1);
+    const trackId  = resized.trackId ?? tracksRef.current[0]?.id;
+
+    stepsRef.current
+      .filter(s =>
+        s.id !== resizedId &&
+        (s.trackId ?? tracksRef.current[0]?.id) === trackId,
+      )
+      .forEach(other => {
+        const oStart = other.startOffset ?? 0;
+        const oEnd   = oStart + (other.duration ?? 1);
+        if (newStart < oEnd && newEnd > oStart) {
+          onBumpToNewTrackRef.current(other.id);
+        }
+      });
+  }
+
+  // ── Resize useEffect ──────────────────────────────────────────────────────
   useEffect(() => {
     if (!resizingStep) {
       currentMouseX.current = null;
-      if (!isDragging) document.body.style.userSelect = '';
+      if (!isDragging && !movingBlock) document.body.style.userSelect = '';
       return;
     }
 
@@ -110,62 +140,126 @@ export function TrackCreatorTimeLine({
       const area = scrollAreaRef.current;
       if (!area) return;
 
-      const rect = area.getBoundingClientRect();
-      const edgeThreshold = 60; 
-      let scrollSpeed = 0;
+      const rect          = area.getBoundingClientRect();
+      const edgeThreshold = 60;
+      let   scrollSpeed   = 0;
+      if (currentMouseX.current > rect.right - edgeThreshold) scrollSpeed = 15;
+      else if (currentMouseX.current < rect.left + edgeThreshold && area.scrollLeft > 0) scrollSpeed = -15;
+      if (scrollSpeed !== 0) area.scrollLeft += scrollSpeed;
 
-      if (currentMouseX.current > rect.right - edgeThreshold) {
-        scrollSpeed = 15; 
-      } else if (currentMouseX.current < rect.left + edgeThreshold && area.scrollLeft > 0) {
-        scrollSpeed = -15; 
+      const scrollDelta = area.scrollLeft - resizingStep.startScrollLeft;
+      const mouseDelta  = currentMouseX.current - resizingStep.startX;
+      const totalDelta  = mouseDelta + scrollDelta;
+
+      if (resizingStep.direction === 'right') {
+        let newWidth = resizingStep.startWidth + totalDelta;
+        if (newWidth < 40) newWidth = 40;
+        onUpdateStepRef.current(resizingStep.id, { duration: newWidth / PIXELS_PER_SECOND });
+      } else {
+        // Left resize: right edge stays fixed, left edge moves
+        const rightEdge   = resizingStep.startOffset + resizingStep.startWidth / PIXELS_PER_SECOND;
+        let   newOffset   = resizingStep.startOffset + totalDelta / PIXELS_PER_SECOND;
+        if (newOffset < 0) newOffset = 0;
+        let   newDuration = rightEdge - newOffset;
+        const minDuration = 40 / PIXELS_PER_SECOND;
+        if (newDuration < minDuration) {
+          newDuration = minDuration;
+          newOffset   = rightEdge - minDuration;
+        }
+        onUpdateStepRef.current(resizingStep.id, { startOffset: newOffset, duration: newDuration });
       }
 
-      if (scrollSpeed !== 0) {
-        area.scrollLeft += scrollSpeed;
-      }
+      animationFrame = requestAnimationFrame(loop);
+    }
 
-      const currentScrollLeft = area.scrollLeft;
-      const scrollDelta = currentScrollLeft - resizingStep.startScrollLeft;
-      const mouseDelta = currentMouseX.current - resizingStep.startX;
-      const totalDelta = mouseDelta + scrollDelta; 
-      
-      let newWidth = resizingStep.startWidth + (resizingStep.direction === 'right' ? totalDelta : -totalDelta);
-      if (newWidth < 40) newWidth = 40; 
-      
-      const newDuration = newWidth / PIXELS_PER_SECOND;
-      onUpdateStepRef.current(resizingStep.id, { duration: newDuration });
+    function handleMouseMove(e: MouseEvent) { currentMouseX.current = e.clientX; }
+    function handleMouseUp() {
+      if (resizingStep?.direction === 'left') bumpOverlaps(resizingStep.id);
+      setResizingStep(null);
+    }
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup',   handleMouseUp);
+    currentMouseX.current = resizingStep.startX;
+    animationFrame = requestAnimationFrame(loop);
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup',   handleMouseUp);
+      cancelAnimationFrame(animationFrame);
+      document.body.style.userSelect = '';
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resizingStep]);
+
+  // ── Free-placement drag useEffect ─────────────────────────────────────────
+  useEffect(() => {
+    if (!movingBlock) {
+      currentMouseX.current = null;
+      currentMouseY.current = null;
+      if (!isDragging && !resizingStep) document.body.style.userSelect = '';
+      return;
+    }
+
+    document.body.style.userSelect = 'none';
+    let animationFrame: number;
+
+    function loop() {
+      if (!movingBlock || currentMouseX.current === null) return;
+      const area = scrollAreaRef.current;
+      if (!area) return;
+
+      const rect          = area.getBoundingClientRect();
+      const edgeThreshold = 60;
+      let   scrollSpeed   = 0;
+      if (currentMouseX.current > rect.right - edgeThreshold) scrollSpeed = 15;
+      else if (currentMouseX.current < rect.left + edgeThreshold && area.scrollLeft > 0) scrollSpeed = -15;
+      if (scrollSpeed !== 0) area.scrollLeft += scrollSpeed;
+
+      // Horizontal: new startOffset
+      const scrollDelta = area.scrollLeft - movingBlock.startScrollLeft;
+      const mouseDelta  = currentMouseX.current - movingBlock.startX;
+      let   newOffset   = movingBlock.origOffset + (mouseDelta + scrollDelta) / PIXELS_PER_SECOND;
+      if (newOffset < 0) newOffset = 0;
+
+      // Vertical: which track is the mouse over?
+      const mouseY        = currentMouseY.current ?? 0;
+      const absoluteY     = mouseY - rect.top + area.scrollTop;
+      const trackIdx      = Math.max(0, Math.min(
+        tracksRef.current.length - 1,
+        Math.floor((absoluteY - RULER_HEIGHT) / TRACK_HEIGHT),
+      ));
+      const targetTrackId = tracksRef.current[trackIdx]?.id;
+
+      const updates: Record<string, any> = { startOffset: newOffset };
+      if (targetTrackId) updates.trackId = targetTrackId;
+      onUpdateStepRef.current(movingBlock.id, updates);
 
       animationFrame = requestAnimationFrame(loop);
     }
 
     function handleMouseMove(e: MouseEvent) {
       currentMouseX.current = e.clientX;
+      currentMouseY.current = e.clientY;
     }
-
-    function handleMouseUp() {
-      setResizingStep(null);
-    }
+    function handleMouseUp() { setMovingBlock(null); }
 
     window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseup', handleMouseUp);
-    
-    currentMouseX.current = resizingStep.startX;
-    animationFrame = requestAnimationFrame(loop); 
+    window.addEventListener('mouseup',   handleMouseUp);
+    animationFrame = requestAnimationFrame(loop);
 
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
+      window.removeEventListener('mouseup',   handleMouseUp);
       cancelAnimationFrame(animationFrame);
       document.body.style.userSelect = '';
     };
-  }, [resizingStep, isDragging]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [movingBlock]);
 
-  // ── DRAG DU CURSEUR (PLAYHEAD) AVEC AUTO-SCROLL CONTINU ───────────────────
+  // ── Playhead drag useEffect ───────────────────────────────────────────────
   useEffect(() => {
-    if (!isDragging) { 
-      currentMouseX.current = null;
-      return; 
-    }
+    if (!isDragging) { currentMouseX.current = null; return; }
     document.body.style.userSelect = 'none';
     let animationFrame: number;
 
@@ -174,21 +268,14 @@ export function TrackCreatorTimeLine({
       const area = scrollAreaRef.current;
       if (!area) return;
 
-      const rect = area.getBoundingClientRect();
+      const rect          = area.getBoundingClientRect();
       const edgeThreshold = 60;
-      let scrollSpeed = 0;
+      let   scrollSpeed   = 0;
+      if (currentMouseX.current > rect.right - edgeThreshold) scrollSpeed = 15;
+      else if (currentMouseX.current < rect.left + edgeThreshold && area.scrollLeft > 0) scrollSpeed = -15;
+      if (scrollSpeed !== 0) area.scrollLeft += scrollSpeed;
 
-      if (currentMouseX.current > rect.right - edgeThreshold) {
-        scrollSpeed = 15;
-      } else if (currentMouseX.current < rect.left + edgeThreshold && area.scrollLeft > 0) {
-        scrollSpeed = -15;
-      }
-
-      if (scrollSpeed !== 0) {
-        area.scrollLeft += scrollSpeed;
-      }
-
-      let newX = currentMouseX.current - rect.left + area.scrollLeft;
+      let newX    = currentMouseX.current - rect.left + area.scrollLeft;
       if (newX < 0) newX = 0;
       let newTime = newX / PIXELS_PER_SECOND;
       if (newTime > MAX_TIME) newTime = MAX_TIME;
@@ -197,30 +284,27 @@ export function TrackCreatorTimeLine({
       animationFrame = requestAnimationFrame(loop);
     }
 
-    function onMouseMove(e: MouseEvent) {
-      currentMouseX.current = e.clientX;
-    }
-    function onMouseUp() { setIsDragging(false); }
+    function onMouseMove(e: MouseEvent) { currentMouseX.current = e.clientX; }
+    function onMouseUp()                { setIsDragging(false); }
 
     window.addEventListener('mousemove', onMouseMove);
-    window.addEventListener('mouseup', onMouseUp);
-    
+    window.addEventListener('mouseup',   onMouseUp);
     animationFrame = requestAnimationFrame(loop);
 
     return () => {
       window.removeEventListener('mousemove', onMouseMove);
-      window.removeEventListener('mouseup', onMouseUp);
+      window.removeEventListener('mouseup',   onMouseUp);
       cancelAnimationFrame(animationFrame);
       document.body.style.userSelect = '';
     };
   }, [isDragging, MAX_TIME]);
 
-  // ── ANIMATION DU PLAYBACK ─────────────────────────────────────────────────
+  // ── Playback animation ────────────────────────────────────────────────────
   useEffect(() => {
     let animationFrame: number;
     let lastTime = performance.now();
 
-    function updatePlayhead(now: number) {
+    function update(now: number) {
       if (!isPlaying) return;
       const delta = (now - lastTime) / 1000;
       lastTime = now;
@@ -229,32 +313,31 @@ export function TrackCreatorTimeLine({
         if (next >= MAX_TIME) { setIsPlaying(false); return MAX_TIME; }
         return next;
       });
-      animationFrame = requestAnimationFrame(updatePlayhead);
+      animationFrame = requestAnimationFrame(update);
     }
 
-    if (isPlaying) {
-      lastTime = performance.now();
-      animationFrame = requestAnimationFrame(updatePlayhead);
-    }
+    if (isPlaying) { lastTime = performance.now(); animationFrame = requestAnimationFrame(update); }
     return () => cancelAnimationFrame(animationFrame);
   }, [isPlaying, MAX_TIME]);
 
-  // ── AUTO-SCROLL DE LA SCÈNE LORS DE LA LECTURE (PLAY) ─────────────────────
+  // ── Auto-scroll playhead ──────────────────────────────────────────────────
   useEffect(() => {
-    if (!scrollAreaRef.current || isDragging || resizingStep) return;
-    const area     = scrollAreaRef.current;
-    const headX    = currentTime * PIXELS_PER_SECOND;
-    const visLeft  = area.scrollLeft;
+    if (!scrollAreaRef.current || isDragging || resizingStep || movingBlock) return;
+    const area    = scrollAreaRef.current;
+    const headX   = currentTime * PIXELS_PER_SECOND;
+    const visLeft = area.scrollLeft;
     const visRight = visLeft + area.clientWidth;
-    if (headX > visRight - 50)            area.scrollLeft = headX - area.clientWidth + 50;
+    if (headX > visRight - 50)                    area.scrollLeft = headX - area.clientWidth + 50;
     else if (headX < visLeft + 50 && visLeft > 0) area.scrollLeft = Math.max(0, headX - 50);
-  }, [currentTime, isDragging, resizingStep]);
+  }, [currentTime, isDragging, resizingStep, movingBlock]);
 
   function stepLabel(step: TimelineStep): string {
     if (step.type === 'wait') return `⏱ ${step.waitMs / 1000}s`;
     const comp = sceneComponents.find(c => c.id === step.componentId);
     return `${comp ? comp.name : step.componentId} → ${step.action}`;
   }
+
+  const isInteracting = !!(resizingStep || movingBlock);
 
   return (
     <section className="timeline-panel">
@@ -270,6 +353,7 @@ export function TrackCreatorTimeLine({
 
       <div className="timeline-grid-container">
 
+        {/* Left labels column */}
         <div className="timeline-labels-column" ref={labelsAreaRef} onScroll={handleScrollLeft}>
           <div className="ruler-corner-cell">Time</div>
           {tracks.map(track => (
@@ -286,7 +370,10 @@ export function TrackCreatorTimeLine({
               <span>{track.name}</span>
               <button
                 className="track-del-btn"
-                onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); onRemoveTrack(track.id); }}
+                onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
+                  e.stopPropagation();
+                  onRemoveTrack(track.id);
+                }}
               >
                 x
               </button>
@@ -294,52 +381,53 @@ export function TrackCreatorTimeLine({
           ))}
         </div>
 
-        <div 
-          className="timeline-scrollable-area" 
-          ref={scrollAreaRef} 
-          style={{ position: 'relative' }} 
+        {/* Scrollable grid */}
+        <div
+          className="timeline-scrollable-area"
+          ref={scrollAreaRef}
+          style={{ position: 'relative' }}
           onScroll={handleScrollRight}
         >
           <div className="timeline-grid-content">
-            
-            {/* Ligne rouge du curseur (en dessous de la règle) */}
+
+            {/* Playhead line */}
             <div
               className="playhead-line"
               style={{ left: `${currentTime * PIXELS_PER_SECOND}px` }}
-              onMouseDown={(e: React.MouseEvent<HTMLDivElement>) => { 
+              onMouseDown={(e: React.MouseEvent<HTMLDivElement>) => {
                 currentMouseX.current = e.clientX;
-                setIsDragging(true); 
-                setIsPlaying(false); 
+                setIsDragging(true);
+                setIsPlaying(false);
               }}
             />
 
-            {/* Règle et Tête du curseur (collés en haut) */}
+            {/* Ruler */}
             <div className="timeline-ruler-row">
               <div
                 className="playhead-head"
                 style={{ left: `${currentTime * PIXELS_PER_SECOND}px` }}
-                onMouseDown={(e: React.MouseEvent<HTMLDivElement>) => { 
+                onMouseDown={(e: React.MouseEvent<HTMLDivElement>) => {
                   currentMouseX.current = e.clientX;
-                  setIsDragging(true); 
-                  setIsPlaying(false); 
+                  setIsDragging(true);
+                  setIsPlaying(false);
                 }}
               />
-
-              {graduations.map((time) => (
-                <div 
-                  key={time} 
-                  className="ruler-tick-cell" 
-                  style={{ width: `${tickInterval * PIXELS_PER_SECOND}px` }} 
+              {graduations.map(t => (
+                <div
+                  key={t}
+                  className="ruler-tick-cell"
+                  style={{ width: `${PIXELS_PER_SECOND}px` }}
                 >
-                  <span className="tick-text">{formatTick(time)}</span>
+                  <span className="tick-text">{formatTick(t)}</span>
                   <div className="tick-mark" />
                 </div>
               ))}
             </div>
 
+            {/* Track rows */}
             {tracks.map(track => {
               const trackSteps = steps.filter(s =>
-                s.trackId ? s.trackId === track.id : track.id === tracks[0]?.id
+                s.trackId ? s.trackId === track.id : track.id === tracks[0]?.id,
               );
               const isActive = selectedTrackId === track.id;
 
@@ -348,63 +436,91 @@ export function TrackCreatorTimeLine({
                   key={track.id}
                   className="timeline-track-data-row"
                   style={{
+                    width:      `${totalWidth}px`,
                     outline:    isActive ? '1px solid rgba(59,130,246,0.4)' : undefined,
-                    background: isActive ? 'rgba(59,130,246,0.07)' : undefined,
-                  }}
-                  onDragOver={(e: React.DragEvent<HTMLDivElement>) => e.preventDefault()}
-                  onDrop={(e: React.DragEvent<HTMLDivElement>) => {
-                    e.preventDefault();
-                    const stepId = e.dataTransfer.getData('stepId');
-                    if (stepId) onMoveStep(stepId, track.id);
+                    background: isActive ? 'rgba(59,130,246,0.07)' : '#1e293b',
                   }}
                 >
                   {trackSteps.length === 0 && (
-                    <span className="track-empty-hint">Glisser un bloc ici</span>
+                    <span className="track-empty-hint">Drag a block here</span>
                   )}
+
                   {trackSteps.map(step => {
-                    const blockWidth = (step.duration || 1) * PIXELS_PER_SECOND;
+                    const blockWidth = (step.duration    ?? 1) * PIXELS_PER_SECOND;
+                    const blockLeft  = (step.startOffset ?? 0) * PIXELS_PER_SECOND;
+                    const isMoving   = movingBlock?.id  === step.id;
+                    const isResizing = resizingStep?.id === step.id;
 
                     return (
                       <div
                         key={step.id}
                         className="track-block"
-                        style={{ width: `${blockWidth}px` }}
-                        draggable={!resizingStep}
-                        onDragStart={(e: React.DragEvent<HTMLDivElement>) => {
-                          if (resizingStep) { e.preventDefault(); return; }
-                          e.dataTransfer.setData('stepId', step.id);
-                          e.dataTransfer.effectAllowed = 'move';
+                        style={{
+                          position:  'absolute',
+                          left:      `${blockLeft}px`,
+                          width:     `${blockWidth}px`,
+                          top:       '50%',
+                          transform: 'translateY(-50%)',
+                          cursor:    isMoving ? 'grabbing' : 'grab',
+                          opacity:   isMoving || isResizing ? 0.75 : 1,
+                          zIndex:    isMoving || isResizing ? 10 : 1,
+                        }}
+                        onMouseDown={(e: React.MouseEvent<HTMLDivElement>) => {
+                          if ((e.target as HTMLElement).closest('.resize-handle-left, .resize-handle-right, .step-del')) return;
+                          if (isInteracting) return;
+                          e.preventDefault();
+                          currentMouseX.current = e.clientX;
+                          currentMouseY.current = e.clientY;
+                          setMovingBlock({
+                            id:              step.id,
+                            origOffset:      step.startOffset ?? 0,
+                            startX:          e.clientX,
+                            startScrollLeft: scrollAreaRef.current?.scrollLeft ?? 0,
+                          });
                         }}
                       >
-                        <div 
+                        <div
                           className="resize-handle-left"
                           onMouseDown={(e: React.MouseEvent<HTMLDivElement>) => {
-                            e.stopPropagation(); 
+                            e.stopPropagation();
+                            if (movingBlock) return;
                             currentMouseX.current = e.clientX;
-                            setResizingStep({ 
-                              id: step.id, 
-                              startWidth: blockWidth, 
-                              startX: e.clientX,
-                              startScrollLeft: scrollAreaRef.current?.scrollLeft || 0,
-                              direction: 'left'
+                            setResizingStep({
+                              id:              step.id,
+                              startWidth:      blockWidth,
+                              startOffset:     step.startOffset ?? 0,
+                              startX:          e.clientX,
+                              startScrollLeft: scrollAreaRef.current?.scrollLeft ?? 0,
+                              direction:       'left',
                             });
                           }}
                         />
 
-                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{stepLabel(step)}</span>
-                        <button className="step-del" onClick={() => onRemoveStep(step.id)}>×</button>
-                        
-                        <div 
+                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', pointerEvents: 'none' }}>
+                          {stepLabel(step)}
+                        </span>
+
+                        <button
+                          className="step-del"
+                          onMouseDown={e => e.stopPropagation()}
+                          onClick={() => onRemoveStep(step.id)}
+                        >
+                          ×
+                        </button>
+
+                        <div
                           className="resize-handle-right"
                           onMouseDown={(e: React.MouseEvent<HTMLDivElement>) => {
-                            e.stopPropagation(); 
+                            e.stopPropagation();
+                            if (movingBlock) return;
                             currentMouseX.current = e.clientX;
-                            setResizingStep({ 
-                              id: step.id, 
-                              startWidth: blockWidth, 
-                              startX: e.clientX,
-                              startScrollLeft: scrollAreaRef.current?.scrollLeft || 0,
-                              direction: 'right'
+                            setResizingStep({
+                              id:              step.id,
+                              startWidth:      blockWidth,
+                              startOffset:     step.startOffset ?? 0,
+                              startX:          e.clientX,
+                              startScrollLeft: scrollAreaRef.current?.scrollLeft ?? 0,
+                              direction:       'right',
                             });
                           }}
                         />

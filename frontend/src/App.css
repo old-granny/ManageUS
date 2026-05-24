@@ -358,13 +358,10 @@
 
 /* Lignes des pistes */
 .timeline-track-data-row {
-  display: flex;
-  align-items: center;
+  position: relative;
   background: #1e293b;
   border-bottom: 1px solid #334155;
-  padding: 0 10px;
-  gap: 8px;
-  min-width: max-content;
+  overflow: visible;
 }
 
 .track-empty-hint {
@@ -375,20 +372,23 @@
 
 /* Blocs d'actions */
 .track-block {
-  position: relative;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
   background: #2563eb;
   color: #fff;
   font-size: 12px;
   padding: 6px 10px;
   padding-left: 18px;
-  padding-right: 28px; /* Espace pour le bouton X et la poignée */
+  padding-right: 28px;
   border-radius: 4px;
   display: flex;
   align-items: center;
   gap: 10px;
   box-shadow: 0 2px 4px rgba(0,0,0,0.2);
   white-space: nowrap;
-  flex-shrink: 0;
+  user-select: none;
+  box-sizing: border-box;
 }
 
 .step-del {

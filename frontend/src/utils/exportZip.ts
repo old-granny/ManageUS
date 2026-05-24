@@ -1,0 +1,131 @@
+import JSZip from 'jszip';
+import type { Timeline, Scene, PlacedComponent } from '../types';
+
+type TimelineStep = Timeline['steps'][number];
+
+interface SequenceEntry {
+  task_id:           string;
+  start_time:        number;
+  expected_end_time: number;
+  args:              Record<string, string>;
+}
+
+// ── Map a component kind + action to the device task_id + args ────────────────
+
+function buildTaskEntry(
+  step: TimelineStep & { type: 'action' },
+  comp: PlacedComponent | undefined,
+): { task_id: string; args: Record<string, string> } {
+  const action = step.action;
+  const name   = comp?.name ?? step.componentId;
+  const kind   = comp?.kind;
+
+  switch (kind) {
+    case 'light':
+      // LightTask expects { mode: "ON"|"OFF", ID: "LED_1" … }
+      return { task_id: 'light', args: { mode: action, ID: name } };
+
+    case 'curtain':
+      // CurtainsTask expects { mode: "OPEN"|"CLOSE" }
+      return { task_id: 'curtains', args: { mode: action } };
+
+    case 'flame':
+      // FireTask expects { ID: "FIRE_1" … }
+      return { task_id: 'fire', args: { ID: name, mode: action } };
+
+    case 'corde':
+      // RopeTask expects { mode: "UP"|"DOWN" }
+      return { task_id: 'rope', args: { mode: action === 'PULL' ? 'UP' : 'DOWN' } };
+
+    case 'speaker':
+      // AudioTask expects { file: "sounds/xxx.mp3" }
+      if (action === 'PLAY' && step.attachedFileName) {
+        return { task_id: 'audio', args: { file: step.attachedFileName } };
+      }
+      return { task_id: 'audio', args: { mode: action } };
+
+    case 'projector':
+      // ScreenTask expects { MEDIA_TYPE: "IMAGE", PATH: "images/xxx.png", ID: name }
+      if (action === 'SHOW' && step.attachedFileName) {
+        return {
+          task_id: 'screen',
+          args: { MEDIA_TYPE: 'IMAGE', PATH: step.attachedFileName, ID: name },
+        };
+      }
+      return { task_id: 'screen', args: { mode: action, ID: name } };
+
+    default:
+      return { task_id: kind ?? 'unknown', args: { mode: action } };
+  }
+}
+
+// ── Main export function ───────────────────────────────────────────────────────
+
+/**
+ * Builds a ZIP file containing:
+ *   steps.json         — the sequence in the device JSON format
+ *   images/<file>      — every image attached to a SHOW step
+ *   sounds/<file>      — every audio file attached to a PLAY step
+ *
+ * Then triggers a browser download of <timelineName>.zip.
+ */
+export async function exportTimelineZip(
+  timeline:     Timeline,
+  scene:        Scene | undefined,
+  fileStore:    Map<string, File>,
+  timelineName: string,
+): Promise<void> {
+  const zip      = new JSZip();
+  const sequence: SequenceEntry[] = [];
+
+  // Process every step – startOffset is now the absolute time position
+  for (const step of timeline.steps) {
+    if (step.type === 'wait') continue;   // wait steps are timing gaps, no device task
+
+    const startTime = step.startOffset ?? 0;
+    const endTime   = startTime + (step.duration ?? 1);
+
+    const comp            = scene?.components.find(c => c.id === step.componentId);
+    const { task_id, args } = buildTaskEntry(step, comp);
+
+    sequence.push({
+      task_id,
+      start_time:        parseFloat(startTime.toFixed(3)),
+      expected_end_time: parseFloat(endTime.toFixed(3)),
+      args,
+    });
+
+    // Add the attached media file to the ZIP
+    if (step.attachedFileName) {
+      const file = fileStore.get(step.id);
+      if (file) zip.file(step.attachedFileName, file);
+    }
+  }
+
+  // Sort by absolute start time
+  sequence.sort((a, b) => a.start_time - b.start_time);
+
+  // ── Build steps.json ─────────────────────────────────────────────────────
+  const json = JSON.stringify(
+    {
+      scene_name:   scene?.name ?? timelineName,
+      file_version: '0.1',
+      sequence,
+    },
+    null,
+    2,
+  );
+
+  zip.file('steps.json', json);
+
+  // ── Generate and download ─────────────────────────────────────────────────
+  const blob = await zip.generateAsync({ type: 'blob' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `${timelineName}.zip`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
