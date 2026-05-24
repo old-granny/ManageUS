@@ -6,12 +6,12 @@
 // =============================================================================
 
 /** The four kinds of physical equipment that can be placed on a stage */
-export type ComponentKind = 'light' | 'speaker' | 'projector' | 'curtain' | 'section_scene' | 'corde' | 'flame' ;
+export type ComponentKind = 'led' | 'speaker' | 'projector' | 'curtain' | 'section_scene' | 'corde' | 'flame' ;
 
 
 /** Human-readable French labels for each component kind (used in the UI) */
 export const KIND_LABELS: Record<ComponentKind, string> = {
-  light:     'Lumière',
+  led:     'Lumière',
   speaker:   'Haut-parleur',
   projector: 'Projecteur',
   curtain:   'Rideau',
@@ -23,7 +23,7 @@ export const KIND_LABELS: Record<ComponentKind, string> = {
 
 export const COMPONENT_CONFIG: Record<ComponentKind, { isResizable: boolean }> = {
   section_scene:  { isResizable: true },
-  light:          { isResizable: false },
+  led:          { isResizable: false },
   speaker:        { isResizable: false },
   projector:      { isResizable: false },
   curtain:        { isResizable: true },
@@ -39,7 +39,7 @@ export const COMPONENT_CONFIG: Record<ComponentKind, { isResizable: boolean }> =
  * executed by the Raspberry Pi display script.
  */
 export const KIND_ACTIONS: Record<ComponentKind, string[]> = {
-  light:             ['ON', 'OFF'],
+  led:             ['ON', 'OFF'],
   speaker:           ['PLAY', 'STOP'], // Play also requires an attached sound
   projector:         ['SHOW', 'OFF'],   // SHOW requires an attached image
   curtain:           ['OPEN', 'CLOSE'],
@@ -74,6 +74,7 @@ export interface PlacedComponent {
   y:       number;         // top  edge position in virtual px on the infinite canvas
   width?:  number;         // component box width  in virtual px (default 80)
   height?: number;         // component box height in virtual px (default 80)
+  ledId?:  number;         // stable 1-4 slot for LED components
 }
 
 
@@ -99,7 +100,7 @@ export interface Scene {
 export const COMPONENT_TEXTURES: Record<ComponentKind, string> = {
   section_scene: 'bg-texture-scene bg-blue-500/5',
   flame:         'bg-texture-flame bg-orange-500/5',
-  light:         'bg-transparent',
+  led:         'bg-transparent',
   speaker:       'bg-transparent',
   projector:     'bg-transparent',
   curtain:       'bg-transparent',

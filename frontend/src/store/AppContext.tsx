@@ -115,9 +115,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
     try {
       const saved = localStorage.getItem('graphicus-state');
       if (!saved) return init;
-      // Always reset `page` to 'scene-editor' so the app starts fresh on reload
-      // `as const` ensures TypeScript keeps the literal type, not widened `string`
-      return { ...init, ...(JSON.parse(saved) as AppState), page: 'scene-editor' as const };
+      const parsed = JSON.parse(saved) as AppState;
+      // Migration: rename old kind 'light' → 'led'
+      const migrateKind = (k: string) => k === 'light' ? 'led' : k;
+      parsed.scenes = parsed.scenes?.map(scene => ({
+        ...scene,
+        components: scene.components.map(c => ({ ...c, kind: migrateKind(c.kind) as any })),
+      })) ?? [];
+      return { ...init, ...parsed, page: 'scene-editor' as const };
     } catch {
       return init;
     }

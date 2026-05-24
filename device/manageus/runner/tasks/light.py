@@ -17,17 +17,17 @@ class LightTask(Task):
         try:
             self._running.set()
 
-            id = self.args.get("ID")
+            led_id = self.args.get("led_id")
             mode = self.args.get("mode")
             
-            match id:
-                case "LED_1":
+            match led_id:
+                case "1":
                     self._set_pin(gpio.LED_1, mode)
-                case "LED_2":
+                case "2":
                     self._set_pin(gpio.LED_2, mode)
-                case "LED_3":
+                case "3":
                     self._set_pin(gpio.LED_3, mode)
-                case "LED_4":
+                case "4":
                     self._set_pin(gpio.LED_4, mode)
                 case _:
                     pass

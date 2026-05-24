@@ -14,10 +14,10 @@ const VIRTUAL_STAGE_HEIGHT = configData.VIRTUAL_STAGE_HEIGHT;
 const DEFAULT_COMP_W = configData.DEFAULT_COMP_W;
 const DEFAULT_COMP_H = configData.DEFAULT_COMP_H;
 
-const PALETTE_KINDS: ComponentKind[] = ['light', 'speaker', 'projector', 'curtain', 'section_scene', 'corde', 'flame'];
+const PALETTE_KINDS: ComponentKind[] = ['led', 'speaker', 'projector', 'curtain', 'section_scene', 'corde', 'flame'];
 
 const DEFAULT_COMPONENT_SIZES: Record<ComponentKind, { width: number; height: number }> = {
-  light: { width: 92, height: 72 },
+  led: { width: 92, height: 72 },
   speaker: { width: 72, height: 96 },
   projector: { width: 102, height: 68 },
   curtain: { width: 128, height: 170 },
@@ -110,10 +110,18 @@ export function SceneEditorPage() {
     e.preventDefault();
   }
 
+  const MAX_LEDS = configData.MAX_LED;
+
   function handleStageDrop(e: React.DragEvent<HTMLDivElement>) {
     e.preventDefault();
     const kind = draggingKind.current;
     if (!kind || !stageRef.current) return;
+
+    if (kind === 'led' && components.filter(c => c.kind === 'led').length >= MAX_LEDS) {
+      alert(`Max ${MAX_LEDS} LEDs for one Manager`);
+      draggingKind.current = null;
+      return;
+    }
 
     const rect = stageRef.current.getBoundingClientRect();
     const xInPixels = (e.clientX - rect.left - pan.x) / scale;
@@ -122,14 +130,20 @@ export function SceneEditorPage() {
     const count = components.filter(c => c.kind === kind).length + 1;
     const defaultSize = DEFAULT_COMPONENT_SIZES[kind];
 
+    // For LEDs, find the lowest free slot (1–4)
+    const ledId = kind === 'led'
+      ? ([1, 2, 3, 4].find(n => !components.some(c => c.kind === 'led' && c.ledId === n)) ?? 1)
+      : undefined;
+
     const placed: PlacedComponent = {
       id:     generateId(kind),
       kind,
-      name:   `${KIND_LABELS[kind]} ${count}`,
+      name:   `${KIND_LABELS[kind]} ${ledId ?? count}`,
       x:      xInPixels - defaultSize.width / 2,
       y:      yInPixels - defaultSize.height / 2,
       width:  defaultSize.width,
       height: defaultSize.height,
+      ...(ledId !== undefined ? { ledId } : {}),
     };
 
     // snapshot for undo then snap initial placement if enabled and within threshold

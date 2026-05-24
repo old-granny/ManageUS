@@ -1,4 +1,3 @@
-import { useId } from 'react';
 import type { ComponentKind } from '../types';
 
 // =============================================================================
@@ -17,13 +16,12 @@ interface Props {
 }
 
 export function ComponentIcon({ kind, size = 48, width, height, active = false }: Props) {
-  const uid = useId();
   const w = width ?? size;
   const h = height ?? size;
   switch (kind) {
 
     // ── Spotlight ─────────────────────────────────────────────────────────────
-    case 'light':
+    case 'led':
       return (
         <img
           src="/projecteurs.svg"

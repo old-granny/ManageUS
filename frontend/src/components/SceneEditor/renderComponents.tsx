@@ -45,7 +45,7 @@ export function RenderComponents({
   return (
     <>
       {components.map(comp => {
-        const isResizable = COMPONENT_CONFIG[comp.kind].isResizable;
+        const isResizable = COMPONENT_CONFIG[comp.kind]?.isResizable ?? false;
 
         const compW = isResizable ? comp.width : 100;
         const compH = isResizable ? comp.height : 100;

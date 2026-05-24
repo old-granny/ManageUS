@@ -15,15 +15,16 @@ interface SequenceEntry {
 function buildTaskEntry(
   step: TimelineStep & { type: 'action' },
   comp: PlacedComponent | undefined,
+  ledId?: number,
 ): { task_id: string; args: Record<string, string> } {
   const action = step.action;
   const name   = comp?.name ?? step.componentId;
   const kind   = comp?.kind;
 
   switch (kind) {
-    case 'light':
-      // LightTask expects { mode: "ON"|"OFF", ID: "LED_1" … }
-      return { task_id: 'light', args: { mode: action, ID: name } };
+    case 'led':
+      // LightTask expects { mode: "ON"|"OFF", led_id: "1"…"4" }
+      return { task_id: 'light', args: { mode: action, led_id: String(ledId ?? 1) } };
 
     case 'curtain':
       // CurtainsTask expects { mode: "OPEN"|"CLOSE" }
@@ -89,7 +90,8 @@ export async function exportTimelineZip(
     const endTime   = startTime + (step.duration ?? 1);
 
     const comp            = scene?.components.find(c => c.id === step.componentId);
-    const { task_id, args } = buildTaskEntry(step, comp);
+    const ledId           = comp?.kind === 'led' ? (comp.ledId ?? 1) : undefined;
+    const { task_id, args } = buildTaskEntry(step, comp, ledId);
 
     sequence.push({
       task_id,

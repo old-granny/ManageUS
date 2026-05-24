@@ -4,12 +4,12 @@ import { ComponentIcon } from './ComponentIcon';
 
 type CompRendererProps = { comp: PlacedComponent; onStartDrag?: (e: React.MouseEvent, comp: PlacedComponent) => void; showName?: boolean };
 
-export const Light: React.FC<CompRendererProps> = ({ comp, onStartDrag }) => (
+export const Led: React.FC<CompRendererProps> = ({ comp, onStartDrag }) => (
 	<div
 		onMouseDown={(e) => onStartDrag && onStartDrag(e, comp)}
 		className="cursor-move w-full h-full flex items-center justify-center"
 	>
-		<ComponentIcon kind="light" width="100%" height="100%" />
+		<ComponentIcon kind="led" width="100%" height="100%" />
 	</div>
 );
 
@@ -38,7 +38,7 @@ export const Flame: React.FC<CompRendererProps> = ({ comp, onStartDrag }) => (
 );
 
 export const NonResizableComponents: Partial<Record<ComponentKind, React.FC<CompRendererProps>>> = {
-	light: Light,
+	led: Led,
 	speaker: Speaker,
 	projector: Projector,
 	corde: Corde,

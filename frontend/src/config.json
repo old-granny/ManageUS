@@ -3,5 +3,6 @@
     "VIRTUAL_STAGE_HEIGHT" : 4000,
     "DEFAULT_COMP_W": 80,
     "DEFAULT_COMP_H": 80,
-    "MIN_COMP_SIZE": 40
+    "MIN_COMP_SIZE": 40,
+    "MAX_LED": 4
 }
