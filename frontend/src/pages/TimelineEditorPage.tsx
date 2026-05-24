@@ -31,6 +31,9 @@ export function TimelineEditorPage() {
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [currentTime, setCurrentTime] = useState<number>(0);
 
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
+
   // Gestion dynamique des pistes
   const [tracks, setTracks] = useState<{ id: string; name: string }[]>([
     { id: 'track-1', name: 'Track 1' },
@@ -48,16 +51,26 @@ export function TimelineEditorPage() {
     setTracks(prev => prev.filter(t => t.id !== id));
   }
 
-  // Animation fluide du curseur de lecture (Playhead)
+  // Animation fluide du curseur de lecture (avec arrêt à la fin)
   useEffect(() => {
     let animationFrame: number;
     let lastTime = performance.now();
+    const MAX_TIME = 10; // La fin de la timeline (10 secondes)
 
     function updatePlayhead(time: number) {
       if (!isPlaying) return;
-      const delta = (time - lastTime) / 1000; // Converti en secondes
+      const delta = (time - lastTime) / 1000;
       lastTime = time;
-      setCurrentTime(prev => prev + delta);
+      
+      setCurrentTime(prev => {
+        const nextTime = prev + delta;
+        // Si on atteint ou dépasse la fin, on arrête la lecture et on bloque à 10s
+        if (nextTime >= MAX_TIME) {
+          setIsPlaying(false);
+          return MAX_TIME;
+        }
+        return nextTime;
+      });
       animationFrame = requestAnimationFrame(updatePlayhead);
     }
 
@@ -68,6 +81,67 @@ export function TimelineEditorPage() {
 
     return () => cancelAnimationFrame(animationFrame);
   }, [isPlaying]);
+
+
+  // Gérer le déplacement de la souris (avec blocage de la sélection de texte)
+  useEffect(() => {
+    // Si on ne glisse pas, on s'assure que le texte est sélectionnable
+    if (!isDragging) {
+      document.body.style.userSelect = ''; 
+      return;
+    }
+
+    const MAX_TIME = 10; // La fin de la timeline (10 secondes)
+
+    // Empêche la sélection du texte pendant qu'on glisse le curseur
+    document.body.style.userSelect = 'none';
+
+    function handleMouseMove(e: MouseEvent) {
+      if (!scrollAreaRef.current) return;
+      const rect = scrollAreaRef.current.getBoundingClientRect();
+      
+      let newX = e.clientX - rect.left + scrollAreaRef.current.scrollLeft;
+      if (newX < 0) newX = 0;
+      
+      let newTime = newX / 350;
+      if (newTime > MAX_TIME) newTime = MAX_TIME; // Bloque le curseur à la fin
+      
+      setCurrentTime(newTime);
+    }
+
+    function handleMouseUp() {
+      setIsDragging(false);
+    }
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.userSelect = ''; // Sécurité au démontage
+    };
+  }, [isDragging]);
+
+
+  // Auto-scroll de la timeline pour suivre le curseur
+  useEffect(() => {
+    if (!scrollAreaRef.current) return;
+    
+    const scrollArea = scrollAreaRef.current;
+    const playheadX = currentTime * 350;
+    const visibleLeft = scrollArea.scrollLeft;
+    const visibleRight = visibleLeft + scrollArea.clientWidth;
+
+    // Si le curseur s'approche du bord droit (marge de 50px pour voir ce qui arrive)
+    if (playheadX > visibleRight - 50) {
+      scrollArea.scrollLeft = playheadX - scrollArea.clientWidth + 50;
+    } 
+    // Si on ramène le curseur manuellement vers la gauche
+    else if (playheadX < visibleLeft + 50 && visibleLeft > 0) {
+      scrollArea.scrollLeft = Math.max(0, playheadX - 50);
+    }
+  }, [currentTime]);
 
   function addActionStep(action: string) {
     if (!selectedComp) return;
@@ -309,10 +383,15 @@ export function TimelineEditorPage() {
           </div>
 
           {/* Zone de droite : Échelle de temps et blocs (Scrollable) */}
-          <div className="timeline-scrollable-area">
+          <div className="timeline-scrollable-area" ref={scrollAreaRef} style={{ position: 'relative' }}>
+            {/* Le curseur (Playhead) interactif */}
             <div 
               className="playhead-line" 
               style={{ left: `${currentTime * 350}px` }} 
+              onMouseDown={() => {
+                setIsDragging(true);
+                setIsPlaying(false); // Met en pause quand on attrape le curseur
+              }}
             />
             
             {/* Règle graduée (0.x secondes) */}
