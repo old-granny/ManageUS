@@ -102,7 +102,6 @@ export function TimelineEditorPage() {
     setSteps(prev => prev.filter(s => s.id !== id));
   }
 
-  // â”€â”€ Save / Export â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   function buildTimeline(): Timeline {
     return {
       id:      existingTimeline?.id ?? `timeline-${Date.now()}`,
@@ -137,7 +136,7 @@ export function TimelineEditorPage() {
       const form = new FormData();
       form.append('file', blob, 'timeline.zip');
       const res = await fetch('http://localhost:3000/timeline/send', { method: 'POST', body: form });
-      if (res.ok) alert('ðŸ“ Timeline envoyÃ©e au Raspberry Pi !');
+      if (res.ok) alert('Timeline envoyÃ©e au Raspberry Pi !');
       else alert(`Erreur ${res.status} du serveur.`);
     } catch (err) {
       console.error(err);
