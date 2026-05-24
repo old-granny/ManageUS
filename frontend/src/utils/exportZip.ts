@@ -75,7 +75,9 @@ export async function exportTimelineZip(
   scene:        Scene | undefined,
   fileStore:    Map<string, File>,
   timelineName: string,
+  opts: { download?: boolean } = {},
 ): Promise<void> {
+  const { download = true } = opts;
   const zip      = new JSZip();
   const sequence: SequenceEntry[] = [];
 
@@ -123,21 +125,22 @@ export async function exportTimelineZip(
   const blob = await zip.generateAsync({ type: 'blob' });
 
   // ── Upload to backend ─────────────────────────────────────────────────────
-  try {
-    const formData = new FormData();
-    formData.append('file', blob, 'config.zip');
-    await fetch('http://localhost:3000/manager/upload', { method: 'POST', body: formData });
-  } catch {
-    // upload failure is non-fatal — local download still proceeds
+  const formData = new FormData();
+  formData.append('file', blob, 'config.zip');
+  const uploadRes = await fetch('http://localhost:3000/manager/upload', { method: 'POST', body: formData });
+  if (!uploadRes.ok) {
+    throw new Error(`Upload failed: ${uploadRes.status}`);
   }
 
-  // ── Trigger browser download ──────────────────────────────────────────────
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  a.href     = url;
-  a.download = `${timelineName}.zip`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  // ── Trigger browser download (optional) ──────────────────────────────────
+  if (download) {
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = `${timelineName}.zip`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
 }

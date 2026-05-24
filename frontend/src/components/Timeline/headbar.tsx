@@ -2,6 +2,7 @@
 
 interface HeadbarTimeLineProps {
   onSave:            () => void;
+  onUpload:          () => Promise<void>;
   onGoToSceneEditor: () => void;
 }
 
@@ -9,7 +10,7 @@ type ConnectionState = 'idle' | 'connecting' | 'connected' | 'error';
 type SendState       = 'idle' | 'sending'    | 'sent'      | 'error';
 type SequenceState   = 'ready' | 'running' | 'stopped';
 
-export function HeadbarTimeLine({ onSave, onGoToSceneEditor }: HeadbarTimeLineProps) {
+export function HeadbarTimeLine({ onSave, onUpload, onGoToSceneEditor }: HeadbarTimeLineProps) {
   const [managerCode,     setManagerCode]     = useState('');
   const [connectionState, setConnectionState] = useState<ConnectionState>('idle');
   const [sendState,       setSendState]       = useState<SendState>('idle');
@@ -48,6 +49,7 @@ export function HeadbarTimeLine({ onSave, onGoToSceneEditor }: HeadbarTimeLinePr
     setSendState('sending');
     setErrorMsg('');
     try {
+      await onUpload();
       const res = await fetch('http://localhost:3000/manager/send', { method: 'POST' });
       if (res.ok) {
         setSendState('sent');

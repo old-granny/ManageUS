@@ -138,11 +138,16 @@ export function TimelineEditorPage() {
       .catch(err => console.error('ZIP export failed:', err));
   }
 
+  async function handleUpload(): Promise<void> {
+    const timeline = buildTimeline();
+    await exportTimelineZip(timeline, scene, fileStore.current, timelineName, { download: false });
+  }
+
 
   return (
     <div className="timeline-editor">
 
-      <HeadbarTimeLine onSave={handleSave} onGoToSceneEditor={() => dispatch({ type: 'SET_PAGE', page: 'scene-editor' })}/>
+      <HeadbarTimeLine onSave={handleSave} onUpload={handleUpload} onGoToSceneEditor={() => dispatch({ type: 'SET_PAGE', page: 'scene-editor' })}/>
 
       <div className="timeline-middle">
         <ObjectCreatorTimeLine
