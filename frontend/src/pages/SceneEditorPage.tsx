@@ -1,14 +1,14 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import type { CSSProperties } from 'react';
 import { ComponentIcon } from '../components/ComponentIcon';
 import { useAppStore } from '../store/AppContext';
 import { KIND_LABELS, type PlacedComponent, type ComponentKind, type Scene, COMPONENT_TEXTURES } from '../types';
 import { COMPONENT_CONFIG } from '../types';
-import { TrashIcon } from '@heroicons/react/24/outline';
+import { TrashIcon, ChevronUpIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
 
 import configData from '../config.json';
 import { Sidebar } from '../components/SideBarSceneEditorPage';
-import { ResizableComponents } from '../components/ResizableObjects';
+import ResizableComponents from '../components/ResizableObjects.tsx';
 import NonResizableComponents from '../components/NonRezisableObjects';
 
 const DEFAULT_COMP_W = configData.DEFAULT_COMP_W;
@@ -65,10 +65,23 @@ export function SceneEditorPage() {
   // Components de present
   const [components, setComponents] = useState<PlacedComponent[]>(activeScene?.components ?? []);
   const isVisibelName = true;
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const historyRef = useRef<PlacedComponent[][]>([]);
+  const MAX_HISTORY = 60;
+
+  function pushHistory() {
+    // Save a shallow copy of current components (sufficient for undoing positions)
+    historyRef.current.push(components.map(c => ({ ...c })));
+    if (historyRef.current.length > MAX_HISTORY) historyRef.current.shift();
+  }
 
   
   // États pour la caméra et actions souris
   const [scale, setScale] = useState<number>(1);
+  const [showGrid, setShowGrid] = useState<boolean>(true);
+  const [snapToGrid, setSnapToGrid] = useState<boolean>(true);
+  const GRID_SIZE = 40;
+  const SNAP_THRESHOLD = 10;
   const [pan, setPan] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const isPanning = useRef<boolean>(false);
   const startPanOffset = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
@@ -104,6 +117,15 @@ export function SceneEditorPage() {
       height: DEFAULT_COMP_H,
     };
 
+    // snapshot for undo then snap initial placement if enabled and within threshold
+    pushHistory();
+    if (snapToGrid) {
+      const snapX = Math.round(placed.x / GRID_SIZE) * GRID_SIZE;
+      const snapY = Math.round(placed.y / GRID_SIZE) * GRID_SIZE;
+      if (Math.abs(placed.x - snapX) <= SNAP_THRESHOLD) placed.x = snapX;
+      if (Math.abs(placed.y - snapY) <= SNAP_THRESHOLD) placed.y = snapY;
+    }
+
     setComponents(prev => [...prev, placed]);
     draggingKind.current = null;
   }
@@ -129,6 +151,9 @@ export function SceneEditorPage() {
     if (e.button !== 0) return; // Uniquement au clic gauche
     e.stopPropagation(); // Bloque l'événement pour ne pas déplacer la caméra en même temps
     e.preventDefault();
+    // snapshot for undo
+    pushHistory();
+    setSelectedId(comp.id);
 
     draggingComp.current = {
       id: comp.id,
@@ -155,8 +180,18 @@ export function SceneEditorPage() {
       const dx = (e.clientX - d.startMouseX) / scale; // Divisé par le scale pour suivre le zoom
       const dy = (e.clientY - d.startMouseY) / scale;
 
+      let newX = d.origX + dx;
+      let newY = d.origY + dy;
+
+      if (snapToGrid) {
+        const snappedX = Math.round(newX / GRID_SIZE) * GRID_SIZE;
+        const snappedY = Math.round(newY / GRID_SIZE) * GRID_SIZE;
+        if (Math.abs(newX - snappedX) <= SNAP_THRESHOLD) newX = snappedX;
+        if (Math.abs(newY - snappedY) <= SNAP_THRESHOLD) newY = snappedY;
+      }
+
       setComponents(prev =>
-        prev.map(c => c.id === d.id ? { ...c, x: d.origX + dx, y: d.origY + dy } : c)
+        prev.map(c => c.id === d.id ? { ...c, x: newX, y: newY } : c)
       );
       return;
     }
@@ -184,6 +219,21 @@ export function SceneEditorPage() {
   }
 
   function handleMouseUpOrLeave() {
+    // Final snap when releasing a dragged component
+    if (draggingComp.current && snapToGrid) {
+      const d = draggingComp.current;
+      setComponents(prev => prev.map(c => {
+        if (c.id !== d.id) return c;
+        let newX = c.x;
+        let newY = c.y;
+        const snappedX = Math.round(newX / GRID_SIZE) * GRID_SIZE;
+        const snappedY = Math.round(newY / GRID_SIZE) * GRID_SIZE;
+        if (Math.abs(newX - snappedX) <= SNAP_THRESHOLD) newX = snappedX;
+        if (Math.abs(newY - snappedY) <= SNAP_THRESHOLD) newY = snappedY;
+        return { ...c, x: newX, y: newY };
+      }));
+    }
+
     isPanning.current = false;
     resizing.current  = null;
     draggingComp.current = null; // 🚀 On relâche la composante
@@ -191,7 +241,9 @@ export function SceneEditorPage() {
 
   function startResize(id: string, dir: ResizeDir, mouseX: number, mouseY: number, comp: PlacedComponent) {
     if (!COMPONENT_CONFIG[comp.kind].isResizable) return;
-    
+    // snapshot for undo
+    pushHistory();
+
     resizing.current = {
       id, dir,
       startMouseX: mouseX,
@@ -208,7 +260,31 @@ export function SceneEditorPage() {
   }
 
   function removeComponent(id: string) {
+    pushHistory();
     setComponents(prev => prev.filter(c => c.id !== id));
+    if (selectedId === id) setSelectedId(null);
+  }
+
+  function bringForward(id: string) {
+    const idx = components.findIndex(c => c.id === id);
+    if (idx === -1 || idx === components.length - 1) return;
+    pushHistory();
+    setComponents(prev => {
+      const arr = prev.slice();
+      [arr[idx], arr[idx + 1]] = [arr[idx + 1], arr[idx]];
+      return arr;
+    });
+  }
+
+  function bringBackward(id: string) {
+    const idx = components.findIndex(c => c.id === id);
+    if (idx <= 0) return;
+    pushHistory();
+    setComponents(prev => {
+      const arr = prev.slice();
+      [arr[idx - 1], arr[idx]] = [arr[idx], arr[idx - 1]];
+      return arr;
+    });
   }
 
   function buildScene(): Scene {
@@ -256,10 +332,31 @@ export function SceneEditorPage() {
     );
 
     if (confirmReset) {
+      clearCurrentSceneCookies();
+      clearCurrentSaveScene();
       setComponents([]); 
     }
   }
   
+
+  function clearCurrentSceneCookies(){
+    localStorage.removeItem('graphicus_scene_backup'); 
+  }
+  
+  function clearCurrentSaveScene(){
+    // On rebâtit la scène vide pour écraser celle en mémoire dans le Reducer
+    if (activeScene) {
+      const emptyScene: Scene = {
+        ...activeScene,
+        name: sceneName,
+        components: [] // On passe un tableau vide
+      };
+      
+      // On dispatch la sauvegarde de la scène vide dans ton store global
+      dispatch({ type: 'SAVE_SCENE', scene: emptyScene });
+    }
+  }
+
   function resetCamera() {
     setScale(0.5);
     if (stageRef.current) {
@@ -272,6 +369,48 @@ export function SceneEditorPage() {
       setPan({ x: 0, y: 0 });
     }
   }
+
+  const gridStyle: CSSProperties = {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    right: 0,
+    bottom: 0,
+    backgroundImage: `linear-gradient(to right, rgba(255,255,255,0.06) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.06) 1px, transparent 1px)`,
+    backgroundSize: `${GRID_SIZE}px ${GRID_SIZE}px`,
+    pointerEvents: 'none',
+    zIndex: 0,
+  };
+
+  // Keyboard handlers: Delete to remove selected, Ctrl/Cmd+Z to undo
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      const active = document.activeElement as HTMLElement | null;
+      if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.isContentEditable)) return;
+
+      // Delete / Backspace to remove selected component
+      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedId) {
+        e.preventDefault();
+        pushHistory();
+        setComponents(prev => prev.filter(c => c.id !== selectedId));
+        setSelectedId(null);
+        return;
+      }
+
+      // Undo (Ctrl/Cmd + Z)
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+        e.preventDefault();
+        const prev = historyRef.current.pop();
+        if (prev) {
+          setComponents(prev);
+          setSelectedId(null);
+        }
+      }
+    }
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [selectedId, components]);
 
   return (
     <div className="scene-editor">
@@ -286,6 +425,12 @@ export function SceneEditorPage() {
         />
         <button onClick={resetCamera} title="Recentre la scène">
           Recentre la vue ({Math.round(scale * 100)}%)
+        </button>
+        <button onClick={() => setShowGrid(s => !s)} title={showGrid ? 'Masquer la grille' : 'Afficher la grille'} className="ml-2">
+          {showGrid ? 'Grille: On' : 'Grille: Off'}
+        </button>
+        <button onClick={() => setSnapToGrid(s => !s)} title={snapToGrid ? 'Désactiver snap' : 'Activer snap'} className="ml-2">
+          {snapToGrid ? 'Snap: On' : 'Snap: Off'}
         </button>
       </header>
 
@@ -323,6 +468,7 @@ export function SceneEditorPage() {
             left: 0,
           }}
         >
+          {showGrid && <div className="stage-grid" style={gridStyle} />}
           {components.length === 0 && (
             <p className="stage-hint" style={{ left: '50%', top: '50%', transform: 'translate(-50%, -50%)', position: 'absolute' }}>
               Glisser des composantes n'importe où dans l'espace
@@ -338,7 +484,8 @@ export function SceneEditorPage() {
             return (
               <div
                 key={comp.id}
-                className={`placed-comp group ${isResizable ? 'resizable-zone' : 'fixed-equipment'}`}
+                onMouseDown={() => setSelectedId(comp.id)}
+                className={`placed-comp group ${isResizable ? 'resizable-zone' : 'fixed-equipment'} ${selectedId === comp.id ? 'selected' : ''}`}
                 style={{
                   position:       'absolute',
                   left:           `${comp.x}px`,
@@ -369,15 +516,33 @@ export function SceneEditorPage() {
                 
 
                 <button
-                  className="absolute -top-2 -right-2 p-1.5 bg-zinc-800 text-white rounded-full shadow-md border border-zinc-700 hover:bg-red-600 hover:text-white hover:border-red-500 transition-all duration-200 scale-0 opacity-0 group-hover:scale-100 group-hover:opacity-100 flex items-center justify-center cursor-pointer z-10"
-                  onMouseDown={(e) => e.stopPropagation()} // Bloque l'enclenchement du drag sur le bouton poubelle
+                  className="absolute -top-12 -right-3 p-1 bg-zinc-700 text-white rounded shadow transition-all duration-150 scale-0 opacity-0 group-hover:scale-100 group-hover:opacity-100 flex items-center justify-center cursor-pointer z-50"
+                  onMouseDown={(e) => { e.stopPropagation(); e.preventDefault(); }}
+                  onClick={(e) => { e.stopPropagation(); bringForward(comp.id); }}
+                  title={"Monter d'une couche"}
+                >
+                  <ChevronUpIcon className="w-4 h-4" />
+                </button>
+
+                <button
+                  className="absolute -top-8 -right-3 p-1 bg-zinc-700 text-white rounded shadow transition-all duration-150 scale-0 opacity-0 group-hover:scale-100 group-hover:opacity-100 flex items-center justify-center cursor-pointer z-50"
+                  onMouseDown={(e) => { e.stopPropagation(); e.preventDefault(); }}
+                  onClick={(e) => { e.stopPropagation(); bringBackward(comp.id); }}
+                  title={"Descendre d'une couche"}
+                >
+                  <ChevronDownIcon className="w-4 h-4" />
+                </button>
+
+                <button
+                  className="absolute -top-3 -right-3 p-2 bg-zinc-800 text-white rounded-full shadow-md border border-zinc-700 hover:bg-red-600 hover:text-white hover:border-red-500 transition-all duration-200 scale-0 opacity-0 group-hover:scale-100 group-hover:opacity-100 flex items-center justify-center cursor-pointer z-50"
+                  onMouseDown={(e) => { e.stopPropagation(); e.preventDefault(); }}
                   onClick={(e) => { 
                     e.stopPropagation(); 
                     removeComponent(comp.id); 
                   }}
                   title={"Retirer le " + comp.name}
                 >
-                  <TrashIcon className="w-3.5 h-3.5 transition-colors" />
+                  <TrashIcon className="w-4 h-4 transition-colors" />
                 </button>
 
                 {/* ── Poignées de redimensionnement ── */}
