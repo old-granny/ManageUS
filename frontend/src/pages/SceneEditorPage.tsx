@@ -294,7 +294,7 @@ export function SceneEditorPage() {
 
     isPanning.current = false;
     resizing.current  = null;
-    draggingComp.current = null; // 🚀 On relâche la composante
+    draggingComp.current = null; // On relâche la composante
   }
 
   function startResize(id: string, dir: ResizeDir, mouseX: number, mouseY: number, comp: PlacedComponent) {
@@ -409,7 +409,7 @@ export function SceneEditorPage() {
     if (components.length === 0) return;
 
     const confirmReset = window.confirm(
-      "Est-vous certain de vouloir vider la scène ? Tous tes composants placés seront supprimés."
+      "Are you sure you want to clear the scene? All the components you've placed will be deleted."
     );
 
     if (confirmReset) {

@@ -143,7 +143,7 @@ export function SceneCreatorTimeLine({
       >
         {(!scene || scene.components.length === 0) && (
           <p className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-white/30 text-2xl italic pointer-events-none select-none">
-            Scène vide — retourne dans l'éditeur de scène
+            Empty scene — go back to the scene editor
           </p>
         )}
 

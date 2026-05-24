@@ -53,7 +53,7 @@ export function Headbar({
                 <input
                     value={sceneName}
                     onChange={e => onSceneNameChange(e.target.value)}
-                    placeholder="Nom de la scène..."
+                    placeholder="Scene name..."
                     className="bg-zinc-900/80 border border-zinc-700/50 rounded-xl text-zinc-100 h-7 w-54 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all font-medium text-xs placeholder-zinc-600 shadow-[inset_0_1px_2px_rgba(0,0,0,0.4)]"
                 />
             </div>
